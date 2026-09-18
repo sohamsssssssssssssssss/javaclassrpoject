@@ -1,123 +1,35 @@
-/* JARVIS Sprint 1 UI Stylesheet */
-.root {
-    -fx-primary-base: #0a0a2e;
-    -fx-primary-surface: #16213e;
-    -fx-primary-on: #f1f1f1;
-    -fx-accent-cyan: #0fbcef;
-    -fx-accent-cyan-dim: rgba(15, 188, 239, 0.12);
-    -fx-warning: #e94d5f;
-}
-
-.text-primary {
-    -fx-fill: #f1f1f1;
-}
-
-.text-accent {
-    -fx-fill: #0fbcef;
-}
-
-.text-warning {
-    -fx-fill: #e94d5f;
-}
-
-.background-primary {
+.root-pane {
     -fx-background-color: #0a0a2e;
+    -fx-font-family: system;
+    -fx-font-size: 14px;
 }
 
-.background-secondary {
+.text-field, .scroll-pane, .scroll-pane > .viewport {
     -fx-background-color: #16213e;
+    -fx-text-fill: #f1f1f1;
+}
+
+.text-field {
+    -fx-prompt-text-fill: #8b8b9e;
+    -fx-border-color: #3a3a5a;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
 }
 
 .button-primary {
     -fx-background-color: #0fbcef;
     -fx-text-fill: #0a0a2e;
     -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-transition: background-color 0.2s;
-}
-
-.button-primary:hover {
-    -fx-background-color: #183a5d;
-}
-
-.button-primary:pressed {
-    -fx-background-color: #102a45;
 }
 
 .button-secondary {
     -fx-background-color: transparent;
-    -fx-text-fill: #f1f1f1;
-    -fx-font-size: 14px;
-    -fx-cursor: hand;
+    -fx-border-color: #e94d5f;
+    -fx-text-fill: #e94d5f;
 }
 
-.button-secondary:hover {
-    -fx-background-color: #0fbcef;
-}
-
-.button-secondary:focused {
-    -fx-background-color: #0fbcef;
-    -fx-border-color: #f1f1f1;
-}
-
-.separator {
-    -fx-background-color: #3a3a5a;
-}
-
-.progress-bar {
-    -fx-accent: #0fbcef;
-}
-
-.progress-bar .bar {
-    -fx-background-color: #0a0a2e;
-}
-
-.progress-bar .progress-indicator {
-    -fx-background-radius: 50%;
-    -fx-background-color: #0fbcef;
-}
-
-.cell-disabled {
-    -fx-opacity: 0.4;
-}
-
-.label-subtle {
-    -fx-fill: #8b8b9e;
-}
-
-.chart-axis {
-    -fx-stroke: #3a3a5a;
-}
-
-.chart-grid-line {
-    -fx-stroke: #3a3a5a;
-}
-
-@keyframes progressFadeIn {
-    from { -fx-opacity: 0; }
-    to { -fx-opacity: 1; }
-}
-
-@keyframes pulse-accent {
-    0% { -fx-translate-y: 0; }
-    50% { -fx-translate-y: -2px; }
-    100% { -fx-translate-y: 0; }
-}
-
-.tooltip {
-    -fx-background-color: #16213e;
-    -fx-text-fill: #f1f1f1;
-    -fx-font-size: 12px;
-}
-
-.empty-state {
-    -fx-opacity: 0.6;
-}
-
-.card {
-    -fx-background-radius: 8;
-    -fx-background-color: #16213e;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 0);
-}
-
-.focus-visible:focus { -fx-outline: 2px solid #0fbcef; -fx-outline-insets: 0; }
+.text-primary { -fx-text-fill: #f1f1f1; }
+.text-accent { -fx-text-fill: #0fbcef; -fx-font-weight: bold; }
+.label-subtle { -fx-text-fill: #a8a8b8; }
+.label-warning { -fx-text-fill: #ff7b8a; }
+.progress-bar { -fx-accent: #0fbcef; }

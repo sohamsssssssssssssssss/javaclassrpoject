@@ -4,6 +4,8 @@ target/
 *.iml
 *.db
 *.sqlite*
+*-wal
+*-shm
 *.log
 .DS_Store
 .env
