@@ -74,12 +74,16 @@ Focused suites (`mvn -Dtest='FileSystemFileSearchServiceTest,DesktopAppServiceTe
 Tests run: 42, Failures: 0, Errors: 0, Skipped: 0 — BUILD SUCCESS
 ```
 
+Re-verified independently on 2026-09-18 from a clean tree: 13 search + 9 app + 6 system + 14 history = 42/42 green (surefire XML reports confirm zero failures/errors).
+
+`mvn javafx:run` (working-agreement gate): verified 2026-09-18 on macOS ARM64, JDK 25.0.2. JavaFX 21.0.10 mac-aarch64 natives resolved and loaded cleanly and the Stage A stub window stayed up; process terminated by the harness after ~25 s with no errors in the log. Command execution is not wired yet (composition is Codex's Stage B step), so the window shows the placeholder label only.
+
 - `FileSystemFileSearchServiceTest` — 13/13: root validation, extension/size boundaries, `b.PDF` case semantics, deterministic ordering across two roots, complete-empty vs partial (`scanLimitReached`), result-limit flag, sprint-limit clamping, pre-cancel → `CANCELLED`, symlink file+dir not followed, symlink escape contained, progress cadence (250 + tail), unreadable root → `ACCESS_DENIED` (POSIX `setReadable(false)`).
 - `DesktopAppServiceTest` — 9/9: recorded `LaunchSpec` equals `open -a Calculator`, all ids/aliases resolve (`calc`, `text editor`, `EDITOR`, `files`), unknown app → `UNKNOWN_APP`, pre-cancel → `CANCELLED`, Windows adapter → `UNSUPPORTED_PLATFORM`, launcher `IOException` → `SERVICE_FAILURE` with cause, `LaunchSpec` validation, resolver rejects unconfigured ids, `ProcessBuilder` receives the list verbatim (no shell wrapper anywhere).
 - `OshiSystemInfoServiceTest` — 6/6: full snapshot passthrough, unavailable metrics stay empty (never fabricated/zero), blank OS fields → `unknown`, probe failure → `SERVICE_FAILURE`, pre-cancel → `CANCELLED`, default OSHI composition constructs.
 - `SqliteHistoryRepositoryTest` — 14/14: schema + `user_version` setup, full-field roundtrip, **history survives reopen** (multiple cycles), `completed_at DESC, request_id DESC` ordering (deterministic UUIDs), limit bounds 0/−1/51 rejected as `INVALID_COMMAND`, bounded `LIMIT`, error columns persist, `CANCELLED` status persists, duplicate PK → `DATABASE_FAILURE`, idempotent close + use-after-close failure, null/blank path rejection, read cancellation, Unicode roundtrip.
 
-No tests launch real applications; tests use JUnit `@TempDir` and disposable database files only. Not run here: `mvn javafx:run` (UI is OpenCode's; integration gate is Codex's Stage B step).
+No tests launch real applications; tests use JUnit `@TempDir` and disposable database files only. `mvn javafx:run` was verified separately (see Verification above); UI behaviour beyond the Stage A placeholder is OpenCode's scope.
 
 ## Environment / results caveats
 
@@ -99,3 +103,5 @@ None. Pinned dependencies (JavaFX 21.0.10, SQLite JDBC 3.53.4.0, OSHI 6.8.3, JUn
 4. Storage/battery metrics need a `SystemSnapshot` extension (frozen record has no fields for them).
 5. `search.roots` parsing (`${user.home}/Documents`, `${user.home}/Downloads`, `jarvis.search.roots` platform-path-separator list) is a composition concern for Codex: pass the resulting existing readable directories to `new FileSystemFileSearchService(List<Path> roots)`.
 6. Configured apps for composition: `new ConfiguredApp("calculator","Calculator",Set.of("calculator","calc"))`, `new ConfiguredApp("text-editor","Text Editor",Set.of("text editor","editor"))`, `new ConfiguredApp("file-manager","File Manager",Set.of("file manager","files"))` (matches docs/COMMANDS.md).
+7. **Request to Codex (`.gitignore`, not Freebuff-owned):** WAL mode creates `history.db-wal` and `history.db-shm` sidecars next to the database. The repo `.gitignore` covers `*.db` and `*.sqlite*` but not `*-wal`/`*-shm`, so a database placed in-repo could leak sidecar files into Git. Requested additions: `*-wal` and `*-shm`. Freebuff code itself never writes databases inside the repository.
+8. History repository ownership note for the integrator: `SqliteHistoryRepository` performs no OS-action rollback — transactions are database-only (CONTRACTS.md lifecycle rule is honoured; e.g. a history-write failure after a successful app launch must never be reported as a failed launch).
