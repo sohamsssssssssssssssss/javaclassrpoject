@@ -106,8 +106,6 @@ public final class FileSystemFileSearchService implements FileSearchService {
         java.util.Objects.requireNonNull(cancellation, "cancellation");
         FileSearchQuery effective = clampQuery(query);
         Set<String> extensions = normalizeExtensions(effective.extensions());
-        boolean sizeConstrained = effective.minimumSizeBytes().isPresent();
-        long minimumSizeBytes = sizeConstrained ? effective.minimumSizeBytes().getAsLong() : 0L;
 
         warnings.clear();
 
@@ -180,8 +178,7 @@ public final class FileSystemFileSearchService implements FileSearchService {
                 if (visitedFileProgress != null && visited.size() % PROGRESS_EVERY == 0) {
                     visitedFileProgress.accept(visited.size());
                 }
-                if (!matchesQuery(current.getFileName().toString(), attributes,
-                        extensions, sizeConstrained, minimumSizeBytes)) {
+                if (!matchesQuery(current.getFileName().toString(), attributes, extensions, effective)) {
                     continue;
                 }
                 matches.add(toMatch(current, attributes));
@@ -225,7 +222,8 @@ public final class FileSystemFileSearchService implements FileSearchService {
         if (maxResults == query.maxResults() && scanLimit == query.scanLimit()) {
             return query;
         }
-        return new FileSearchQuery(query.extensions(), query.minimumSizeBytes(), maxResults, scanLimit);
+        return new FileSearchQuery(query.extensions(), query.minimumSizeBytes(), query.maximumSizeBytes(),
+                query.modifiedAfter(), query.modifiedBefore(), maxResults, scanLimit);
     }
 
     private Set<String> normalizeExtensions(Set<String> extensions) {
@@ -259,12 +257,17 @@ public final class FileSystemFileSearchService implements FileSearchService {
         return builder == null ? value : builder.toString();
     }
 
+    /**
+     * Sprint 2 filtering: extension match as in sprint 1, plus optional size
+     * bounds (minimum inclusive, maximum exclusive) and an optional
+     * last-modified window (modifiedAfter inclusive, modifiedBefore
+     * exclusive), so "from yesterday" is exactly the previous calendar day.
+     */
     private boolean matchesQuery(
             String fileName,
             BasicFileAttributes attributes,
             Set<String> extensions,
-            boolean sizeConstrained,
-            long minimumSizeBytes) {
+            FileSearchQuery query) {
         int dot = fileName.lastIndexOf('.');
         if (dot < 0 || dot == fileName.length() - 1) {
             return false;
@@ -272,7 +275,20 @@ public final class FileSystemFileSearchService implements FileSearchService {
         if (!extensions.contains(asciiLower(fileName.substring(dot + 1)))) {
             return false;
         }
-        return !sizeConstrained || attributes.size() >= minimumSizeBytes;
+        if (query.minimumSizeBytes().isPresent() && attributes.size() < query.minimumSizeBytes().getAsLong()) {
+            return false;
+        }
+        if (query.maximumSizeBytes().isPresent() && attributes.size() >= query.maximumSizeBytes().getAsLong()) {
+            return false;
+        }
+        Instant modified = attributes.lastModifiedTime().toInstant();
+        if (query.modifiedAfter().isPresent() && modified.isBefore(query.modifiedAfter().get())) {
+            return false;
+        }
+        if (query.modifiedBefore().isPresent() && !modified.isBefore(query.modifiedBefore().get())) {
+            return false;
+        }
+        return true;
     }
 
     private FileMatch toMatch(Path file, BasicFileAttributes attributes) {

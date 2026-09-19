@@ -16,6 +16,10 @@
         <sqlite.version>3.53.4.0</sqlite.version>
         <oshi.version>6.8.3</oshi.version>
         <junit.version>5.11.4</junit.version>
+        <!-- Pinned to 0.3.38: the 0.3.45 binding requires vosk_recognizer_set_grm,
+             which the bundled darwin dylib does not export (UnsatisfiedLinkError).
+             See docs/AUDIO_FEASIBILITY.md on-target results. -->
+        <vosk.version>0.3.38</vosk.version>
     </properties>
 
     <dependencies>
@@ -33,6 +37,23 @@
             <groupId>com.github.oshi</groupId>
             <artifactId>oshi-core</artifactId>
             <version>${oshi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.alphacephei</groupId>
+            <artifactId>vosk</artifactId>
+            <version>${vosk.version}</version>
+        </dependency>
+        <!-- Document text extraction (sprint 4): tika-core alone ships no
+             parsers; the standard package brings PDFBox/POI-backed ones. -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>2.8.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-parsers-standard-package</artifactId>
+            <version>2.8.0</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -92,6 +113,16 @@
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>META-INF/services/java.sql.Driver</resource>
+                                </transformer>
+                                <!-- Tika discovers parsers and detectors through the
+                                     ServiceLoader; without appending, the shaded jar
+                                     would keep only one provider file and silently lose
+                                     the PDF/DOCX parsers. -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>META-INF/services/org.apache.tika.parser.Parser</resource>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>META-INF/services/org.apache.tika.detect.Detector</resource>
                                 </transformer>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.jarvis.app.JarvisLauncher</mainClass>

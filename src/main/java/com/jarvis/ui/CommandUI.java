@@ -17,6 +17,8 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
     private final Label statusLabel = new Label();
     private final ProgressBar progressBar = new ProgressBar();
     private final VBox results = new VBox(8);
+    private VBox topBox;
+    private VoicePanel voicePanel;
     private final Label searchScopeLabel = new Label();
     private CommandSubscription currentSubscription;
 
@@ -35,7 +37,7 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         setPadding(new Insets(16));
         setPrefSize(820, 620);
 
-        commandField.setPromptText("Try: find PDFs, system status, show history");
+        commandField.setPromptText("Try: find txt files, find PDFs larger than 20 MB, create folder called College, undo");
         commandField.setAccessibleText("JARVIS command");
         commandField.setOnAction(ignored -> onSubmit());
         HBox.setHgrow(commandField, Priority.ALWAYS);
@@ -55,6 +57,7 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
 
         HBox commandRow = new HBox(8, commandField, submitButton, cancelButton);
         VBox top = new VBox(8, commandRow, statusLabel, progressBar);
+        topBox = top;
         top.setPadding(new Insets(0, 0, 12, 0));
         progressBar.setMaxWidth(Double.MAX_VALUE);
         progressBar.setVisible(false);
@@ -128,7 +131,72 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             case FileSearchResult files -> showFiles(files);
             case SystemSnapshot snapshot -> showSystem(snapshot);
             case HistoryResult history -> showHistory(history);
+            case MutationReceipt mutation -> showMutation(mutation);
+            case UndoResult undo -> showUndo(undo);
+            case ContentSearchResult content -> showContentSearch(content);
         }
+    }
+
+    private void showMutation(MutationReceipt receipt) {
+        for (MutationReceipt.Entry entry : receipt.entries()) {
+            String line = capitalize(receipt.kind().name().toLowerCase(java.util.Locale.ROOT)) + "  "
+                    + entry.source().getFileName() + "  →  " + entry.target().getFileName();
+            if (entry.status() == OperationStatus.APPLIED) {
+                showMessage("✓ " + line, "text-accent");
+            } else {
+                showMessage("✗ " + line + " — "
+                        + entry.error().map(StructuredError::message).orElse("failed"), "label-warning");
+            }
+        }
+        if (receipt.kind() != MutationKind.CREATE_FOLDER) {
+            showMessage("Undo is available for moves and renames: type 'undo'.", "label-subtle");
+        }
+    }
+
+    private void showUndo(UndoResult undo) {
+        for (UndoEntry.JournalRow row : undo.rows()) {
+            String line = row.entry().source().getFileName() + "  →  " + row.entry().target().getFileName();
+            switch (row.status()) {
+                case UNDONE -> showMessage("✓ Restored " + line, "text-accent");
+                case FAILED -> showMessage("✗ Could not restore " + line + " — "
+                        + row.error().map(StructuredError::message).orElse("failed"), "label-warning");
+                case ACTIVE -> showMessage("• " + line, "label-subtle");
+            }
+        }
+    }
+
+    /** Renders document content search: matches with snippets, plus every unreadable document. */
+    private void showContentSearch(ContentSearchResult content) {
+        if (content.documents().isEmpty()) {
+            showMessage("No documents were searched", "label-subtle");
+        }
+        for (ContentSearchResult.DocumentHit hit : content.documents()) {
+            String name = hit.path().getFileName().toString();
+            if (hit.extractionFailed()) {
+                showMessage("✗ " + name + " — could not extract text"
+                        + hit.failureReason().map(reason -> ": " + reason).orElse(""), "label-warning");
+            } else if (hit.matchCount() > 0) {
+                Label line = new Label("✓ " + name + " — " + hit.matchCount()
+                        + (hit.matchCount() >= 50 ? "+ match(es)" : " match(es)"));
+                line.getStyleClass().add("text-primary");
+                line.setWrapText(true);
+                results.getChildren().add(line);
+                hit.snippet().ifPresent(snippet -> showMessage("    …" + snippet + "…", "label-subtle"));
+            } else {
+                showMessage("• " + name + " — no match", "label-subtle");
+            }
+        }
+        showMessage("Total: " + content.totalMatches() + " match(es)", "text-accent");
+        if (!content.appliedLimits().isEmpty()) {
+            showMessage(content.appliedLimits(), "label-warning");
+        }
+    }
+
+    private static String capitalize(String value) {
+        if (value.isEmpty()) {
+            return value;
+        }
+        return Character.toUpperCase(value.charAt(0)) + value.substring(1);
     }
 
     private void showFiles(FileSearchResult files) {
@@ -213,6 +281,21 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
 
     public void setSearchScope(String scope) {
         searchScopeLabel.setText("Search scope: " + scope);
+    }
+
+    /**
+     * Adds the optional voice status strip above the results area without
+     * changing the existing layout. No-op when already installed.
+     */
+    public void setVoicePanel(VoicePanel panel) {
+        java.util.Objects.requireNonNull(panel, "panel");
+        if (voicePanel != null) {
+            return;
+        }
+        this.voicePanel = panel;
+        if (topBox != null) {
+            topBox.getChildren().add(panel);
+        }
     }
 
     @Override

@@ -5,8 +5,11 @@ import com.jarvis.api.CancellationToken;
 import com.jarvis.api.ErrorCode;
 import com.jarvis.api.HistoryEntry;
 import com.jarvis.api.HistoryRepository;
+import com.jarvis.api.MutationKind;
 import com.jarvis.api.ServiceException;
 import com.jarvis.api.StructuredError;
+import com.jarvis.api.UndoEntry;
+import com.jarvis.api.UndoJournal;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.UUID;
 
 /**
  * SQLite/JDBC history persistence.
@@ -39,13 +43,19 @@ import java.util.UUID;
  *
  * <p>Transactions here are database-only: they never roll back OS actions
  * already taken by other services.</p>
+ *
+ * <p>Sprint 2 adds the {@link UndoJournal} role: the same database stores one
+ * row per reversible file operation (migration 002, {@code undo_entries}).
+ * Rows are marked per operation so undo stays idempotent when some entries of
+ * a group were already reversed.</p>
  */
-public final class SqliteHistoryRepository implements HistoryRepository {
+public final class SqliteHistoryRepository implements HistoryRepository, UndoJournal {
 
-    static final int SCHEMA_VERSION = 1;
+    static final int SCHEMA_VERSION = 2;
     static final int MAX_LIMIT = 50;
 
     static final String MIGRATION_RESOURCE = "/db/001_history.sql";
+    static final String UNDO_MIGRATION_RESOURCE = "/db/002_undo_entries.sql";
 
     private final Path databaseFile;
     private final Object lifecycleLock = new Object();
@@ -278,5 +288,138 @@ public final class SqliteHistoryRepository implements HistoryRepository {
     }
 
     private static final List<Migration> MIGRATIONS = List.of(
-            new Migration(1, MIGRATION_RESOURCE));
+            new Migration(1, MIGRATION_RESOURCE),
+            new Migration(2, UNDO_MIGRATION_RESOURCE));
+
+    @Override
+    public void record(UndoEntry entry) throws ServiceException {
+        java.util.Objects.requireNonNull(entry, "entry");
+        if (entry.kind() != MutationKind.MOVE && entry.kind() != MutationKind.RENAME) {
+            throw new ServiceException(new StructuredError(
+                    ErrorCode.INVALID_COMMAND,
+                    "Only move and rename operations are undoable",
+                    Optional.of("kind=" + entry.kind())));
+        }
+        Connection db = connection();
+        String sql = "INSERT INTO undo_entries("
+                + "entry_id, request_id, kind, source_path, target_path, recorded_at, status) "
+                + "VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE')";
+        synchronized (lifecycleLock) {
+            try (PreparedStatement statement = db.prepareStatement(sql)) {
+                statement.setString(1, entry.id().toString());
+                statement.setString(2, entry.requestId().toString());
+                statement.setString(3, entry.kind().name());
+                statement.setString(4, entry.source().toString());
+                statement.setString(5, entry.target().toString());
+                statement.setString(6, entry.recordedAt().toString());
+                statement.executeUpdate();
+            } catch (SQLException e) {
+                throw failure("Could not record undo entry", e);
+            }
+        }
+    }
+
+    @Override
+    public List<UndoEntry.JournalRow> rowsForRequest(UUID requestId, CancellationToken cancellation)
+            throws ServiceException {
+        java.util.Objects.requireNonNull(requestId, "requestId");
+        java.util.Objects.requireNonNull(cancellation, "cancellation");
+        Connection db = connection();
+        String sql = "SELECT entry_id, request_id, kind, source_path, target_path, recorded_at, "
+                + "status, error_code, error_message "
+                + "FROM undo_entries WHERE request_id = ? "
+                + "ORDER BY recorded_at DESC, entry_id DESC";
+        synchronized (lifecycleLock) {
+            try (PreparedStatement statement = db.prepareStatement(sql)) {
+                statement.setString(1, requestId.toString());
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    List<UndoEntry.JournalRow> rows = new ArrayList<>();
+                    while (resultSet.next()) {
+                        if (cancellation.isCancellationRequested()) {
+                            throw new ServiceException(new StructuredError(
+                                    ErrorCode.CANCELLED,
+                                    "Undo journal read cancelled",
+                                    Optional.empty()));
+                        }
+                        rows.add(readRow(resultSet));
+                    }
+                    return rows;
+                }
+            } catch (SQLException e) {
+                throw failure("Could not read undo entries", e);
+            }
+        }
+    }
+
+    @Override
+    public void markStatus(UUID entryId, UndoEntry.JournalStatus status, Optional<StructuredError> error)
+            throws ServiceException {
+        java.util.Objects.requireNonNull(entryId, "entryId");
+        UndoEntry.JournalStatus effective = status == null ? UndoEntry.JournalStatus.FAILED : status;
+        java.util.Objects.requireNonNull(error, "error");
+        Connection db = connection();
+        String sql = "UPDATE undo_entries SET status = ?, error_code = ?, error_message = ? "
+                + "WHERE entry_id = ?";
+        synchronized (lifecycleLock) {
+            try (PreparedStatement statement = db.prepareStatement(sql)) {
+                statement.setString(1, effective.name());
+                statement.setString(2, error.map(e -> e.code().name()).orElse(null));
+                statement.setString(3, error.map(StructuredError::message).orElse(null));
+                statement.setString(4, entryId.toString());
+                if (statement.executeUpdate() != 1) {
+                    throw new ServiceException(new StructuredError(
+                            ErrorCode.DATABASE_FAILURE,
+                            "Undo entry does not exist: " + entryId,
+                            Optional.empty()));
+                }
+            } catch (SQLException e) {
+                throw failure("Could not update undo entry", e);
+            }
+        }
+    }
+
+    @Override
+    public Optional<UUID> latestUndoableRequest(CancellationToken cancellation) throws ServiceException {
+        java.util.Objects.requireNonNull(cancellation, "cancellation");
+        Connection db = connection();
+        String sql = "SELECT request_id, MAX(recorded_at) AS latest FROM undo_entries "
+                + "WHERE status = 'ACTIVE' GROUP BY request_id "
+                + "ORDER BY latest DESC LIMIT 1";
+        synchronized (lifecycleLock) {
+            try (PreparedStatement statement = db.prepareStatement(sql);
+                 ResultSet resultSet = statement.executeQuery()) {
+                if (cancellation.isCancellationRequested()) {
+                    throw new ServiceException(new StructuredError(
+                            ErrorCode.CANCELLED,
+                            "Undo journal read cancelled",
+                            Optional.empty()));
+                }
+                return resultSet.next() ? Optional.of(UUID.fromString(resultSet.getString(1))) : Optional.empty();
+            } catch (SQLException e) {
+                throw failure("Could not read latest undoable request", e);
+            }
+        }
+    }
+
+    private static UndoEntry.JournalRow readRow(ResultSet resultSet) throws SQLException {
+        String errorCode = resultSet.getString("error_code");
+        String errorMessage = resultSet.getString("error_message");
+        Optional<StructuredError> error = errorCode == null
+                ? Optional.empty()
+                : Optional.of(new StructuredError(
+                        ErrorCode.valueOf(errorCode),
+                        errorMessage == null ? "Unspecified error" : errorMessage,
+                        Optional.empty()));
+        UndoEntry entry = new UndoEntry(
+                UUID.fromString(resultSet.getString("entry_id")),
+                UUID.fromString(resultSet.getString("request_id")),
+                MutationKind.valueOf(resultSet.getString("kind")),
+                Path.of(resultSet.getString("source_path")),
+                Path.of(resultSet.getString("target_path")),
+                Instant.parse(resultSet.getString("recorded_at")));
+        return new UndoEntry.JournalRow(
+                entry,
+                UndoEntry.JournalStatus.valueOf(resultSet.getString("status")),
+                error);
+    }
 }

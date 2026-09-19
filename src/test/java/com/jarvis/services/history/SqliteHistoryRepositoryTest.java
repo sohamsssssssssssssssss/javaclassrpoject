@@ -4,8 +4,10 @@ import com.jarvis.api.CommandStatus;
 import com.jarvis.api.CancellationToken;
 import com.jarvis.api.ErrorCode;
 import com.jarvis.api.HistoryEntry;
+import com.jarvis.api.MutationKind;
 import com.jarvis.api.ServiceException;
 import com.jarvis.api.StructuredError;
+import com.jarvis.api.UndoEntry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -250,6 +252,123 @@ class SqliteHistoryRepositoryTest {
         }
         try (SqliteHistoryRepository repository = new SqliteHistoryRepository(db)) {
             assertEquals(unicode, repository.recent(1, NONE).get(0).originalText());
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // Sprint 2: undo journal (undo_entries table, migration 002).
+    // -----------------------------------------------------------------
+
+    private static UndoEntry undoEntry(UUID requestId, String name) {
+        return undoEntry(requestId, name, Instant.parse("2026-09-18T12:00:00Z"));
+    }
+
+    private static UndoEntry undoEntry(UUID requestId, String name, Instant recordedAt) {
+        return new UndoEntry(
+                UUID.randomUUID(),
+                requestId,
+                MutationKind.MOVE,
+                Path.of("/scope/demo").resolve(name),
+                Path.of("/scope/demo-moved").resolve(name),
+                recordedAt);
+    }
+
+    @Test
+    void recordsAndReadsUndoEntriesPerRequest(@TempDir Path temp) throws Exception {
+        Path db = temp.resolve("history.db");
+        UUID requestA = UUID.randomUUID();
+        UUID requestB = UUID.randomUUID();
+        try (SqliteHistoryRepository repository = new SqliteHistoryRepository(db)) {
+            repository.record(undoEntry(requestA, "a.pdf", Instant.parse("2026-09-18T12:00:00Z")));
+            repository.record(undoEntry(requestA, "b.pdf", Instant.parse("2026-09-18T12:00:01Z")));
+            repository.record(undoEntry(requestB, "c.pdf", Instant.parse("2026-09-18T12:00:02Z")));
+
+            List<UndoEntry.JournalRow> rowsA = repository.rowsForRequest(requestA, NONE);
+            assertEquals(2, rowsA.size());
+            assertTrue(rowsA.stream().allMatch(row -> row.status() == UndoEntry.JournalStatus.ACTIVE));
+            assertEquals(Optional.of(requestB), repository.latestUndoableRequest(NONE));
+        }
+    }
+
+    @Test
+    void marksRowsPerEntrySoUndoStaysIdempotent(@TempDir Path temp) throws Exception {
+        Path db = temp.resolve("history.db");
+        UUID request = UUID.randomUUID();
+        UndoEntry first = undoEntry(request, "a.pdf");
+        UndoEntry second = undoEntry(request, "b.pdf");
+        try (SqliteHistoryRepository repository = new SqliteHistoryRepository(db)) {
+            repository.record(first);
+            repository.record(second);
+            repository.markStatus(first.id(), UndoEntry.JournalStatus.UNDONE, Optional.empty());
+            assertEquals(Optional.of(request), repository.latestUndoableRequest(NONE));
+
+            repository.markStatus(second.id(), UndoEntry.JournalStatus.UNDONE, Optional.empty());
+            assertEquals(Optional.empty(), repository.latestUndoableRequest(NONE));
+        }
+    }
+
+    @Test
+    void undoJournalSurvivesReopeningTheDatabase(@TempDir Path temp) throws Exception {
+        Path db = temp.resolve("history.db");
+        UUID request = UUID.randomUUID();
+        UndoEntry stored = undoEntry(request, "report.pdf");
+        try (SqliteHistoryRepository repository = new SqliteHistoryRepository(db)) {
+            repository.record(stored);
+        }
+        try (SqliteHistoryRepository repository = new SqliteHistoryRepository(db)) {
+            List<UndoEntry.JournalRow> rows = repository.rowsForRequest(request, NONE);
+            assertEquals(1, rows.size());
+            UndoEntry read = rows.get(0).entry();
+            assertEquals(MutationKind.MOVE, read.kind());
+            assertEquals(stored.source(), read.source());
+            assertEquals(stored.target(), read.target());
+            assertEquals(stored.recordedAt(), read.recordedAt());
+        }
+    }
+
+    @Test
+    void failedUndoRowsPersistTheirError(@TempDir Path temp) throws Exception {
+        Path db = temp.resolve("history.db");
+        UUID request = UUID.randomUUID();
+        UndoEntry stored = undoEntry(request, "x.pdf");
+        try (SqliteHistoryRepository repository = new SqliteHistoryRepository(db)) {
+            repository.record(stored);
+            repository.markStatus(stored.id(), UndoEntry.JournalStatus.FAILED,
+                    Optional.of(new StructuredError(
+                            ErrorCode.TARGET_EXISTS, "Original location is occupied", Optional.empty())));
+        }
+        try (SqliteHistoryRepository repository = new SqliteHistoryRepository(db)) {
+            UndoEntry.JournalRow row = repository.rowsForRequest(request, NONE).get(0);
+            assertEquals(UndoEntry.JournalStatus.FAILED, row.status());
+            assertEquals(ErrorCode.TARGET_EXISTS, row.error().orElseThrow().code());
+        }
+    }
+
+    @Test
+    void refusesToJournalNonReversibleKinds(@TempDir Path temp) {
+        Path db = temp.resolve("history.db");
+        UndoEntry copy = new UndoEntry(UUID.randomUUID(), UUID.randomUUID(),
+                MutationKind.COPY, Path.of("/scope/a"), Path.of("/scope/b"),
+                Instant.parse("2026-09-18T12:00:00Z"));
+        try (SqliteHistoryRepository repository = new SqliteHistoryRepository(db)) {
+            ServiceException exception = assertThrows(ServiceException.class, () -> repository.record(copy));
+            assertEquals(ErrorCode.INVALID_COMMAND, exception.error().code());
+        } catch (ServiceException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Test
+    void undoJournalRejectsNullArguments(@TempDir Path temp) {
+        Path db = temp.resolve("history.db");
+        try (SqliteHistoryRepository repository = new SqliteHistoryRepository(db)) {
+            assertThrows(NullPointerException.class, () -> repository.record(null));
+            assertThrows(NullPointerException.class, () -> repository.rowsForRequest(null, NONE));
+            assertThrows(NullPointerException.class, () -> repository.latestUndoableRequest(null));
+            assertThrows(NullPointerException.class, () -> repository.markStatus(
+                    UUID.randomUUID(), UndoEntry.JournalStatus.UNDONE, null));
+        } catch (ServiceException e) {
+            throw new IllegalStateException(e);
         }
     }
 }

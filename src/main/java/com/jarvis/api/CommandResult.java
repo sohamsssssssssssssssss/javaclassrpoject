@@ -1,4 +1,12 @@
 package com.jarvis.api;
 
-public sealed interface CommandResult permits AppLaunchReceipt, FileSearchResult, SystemSnapshot, HistoryResult {
+/** Result payload of a command, carried by {@link CommandOutcome}. */
+public sealed interface CommandResult permits
+        AppLaunchReceipt,
+        FileSearchResult,
+        SystemSnapshot,
+        HistoryResult,
+        MutationReceipt,
+        UndoResult,
+        ContentSearchResult {
 }
