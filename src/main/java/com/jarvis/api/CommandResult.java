@@ -11,5 +11,8 @@ public sealed interface CommandResult permits
         ContentSearchResult,
         SelectedFileResult,
         FileMutationPreview,
-        CancellationReceipt {
+        CancellationReceipt,
+        ProjectContext,
+        ProjectOperationResult,
+        ProjectOutcomeReport {
 }

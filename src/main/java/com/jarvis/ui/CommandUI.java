@@ -143,6 +143,33 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
                 showMessage("Type 'confirm' to apply, or 'cancel' to discard.", "label-subtle");
             }
             case CancellationReceipt cancelled -> showMessage(cancelled.message(), "label-subtle");
+            case ProjectContext project -> {
+                showMessage("✓ Active project: " + project.name(), "text-accent");
+                showMessage(project.root() + "  (" + project.buildSystem() + ")", "label-subtle");
+            }
+            case ProjectOperationResult run -> {
+                String icon = switch (run.status()) {
+                    case SUCCEEDED -> "✓";
+                    case BUILD_FAILED -> "✗";
+                    case TIMED_OUT -> "⏱";
+                };
+                showMessage(icon + " " + run.operation() + " on " + run.projectName()
+                        + " — " + run.status()
+                        + (run.exitCode() == null ? "" : " (exit " + run.exitCode() + ")")
+                        + ", " + (run.durationMillis() / 1000.0) + " s", "text-accent");
+                if (!run.outputSummary().isBlank()) {
+                    showMessage(run.outputSummary(), "label-subtle");
+                }
+                if (run.outputTruncated()) {
+                    showMessage("(older output was truncated)", "label-warning");
+                }
+            }
+            case ProjectOutcomeReport report -> report.operation().ifPresentOrElse(
+                    run -> showMessage("Last project operation: " + run.operation()
+                            + " on " + run.projectName() + " — " + run.status()
+                            + (run.exitCode() == null ? "" : " (exit " + run.exitCode() + ")")
+                            + ", " + (run.durationMillis() / 1000.0) + " s", "text-accent"),
+                    () -> showMessage("No project operation has run in this session yet.", "label-subtle"));
         }
     }
 

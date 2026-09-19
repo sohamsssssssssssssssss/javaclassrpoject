@@ -20,6 +20,13 @@ import com.jarvis.api.FileOpener;
 import com.jarvis.api.FileSearchQuery;
 import com.jarvis.api.FileSearchResult;
 import com.jarvis.api.FileSearchService;
+import com.jarvis.api.ProjectContext;
+import com.jarvis.api.ProjectOperation;
+import com.jarvis.api.ProjectOperationResult;
+import com.jarvis.api.ProjectOperationStatus;
+import com.jarvis.api.ProjectOutcomeReport;
+import com.jarvis.api.ProjectProcessRunner;
+import com.jarvis.api.ProjectService;
 import com.jarvis.api.SelectedFileResult;
 import com.jarvis.api.HistoryEntry;
 import com.jarvis.api.HistoryRepository;
@@ -44,6 +51,8 @@ import com.jarvis.services.files.DocumentText;
 import com.jarvis.services.files.ExtractionStatus;
 import com.jarvis.services.files.FileService;
 import com.jarvis.services.files.FileSystemFileService;
+import com.jarvis.services.project.FileSystemProjectService;
+import com.jarvis.services.project.MavenProjectProcessRunner;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -98,6 +107,8 @@ public final class DefaultCommandGateway implements CommandGateway {
     private final FileService fileService;
     private final ContentSearchService contentSearchService;
     private final FileOpener fileOpener;
+    private final ProjectService projectService;
+    private final ProjectProcessRunner projectProcessRunner;
     private final SessionState sessionState = new SessionState();
     /** Guard for the bounded, ordered context/confirmation state machine. */
     private final Object stateLock = new Object();
@@ -155,7 +166,44 @@ public final class DefaultCommandGateway implements CommandGateway {
                     throw new ServiceException(error(
                             ErrorCode.UNSUPPORTED_PLATFORM,
                             "Opening files is not configured in this build"));
-                });
+                }, new FileSystemProjectService(), new MavenProjectProcessRunner());
+    }
+
+    /** Sprint 4B composition: adds active-project detection and bounded Maven execution. */
+    public DefaultCommandGateway(
+            AppService appService,
+            FileSearchService fileSearchService,
+            SystemInfoService systemInfoService,
+            HistoryRepository historyRepository,
+            ExecutorService executor,
+            FileMutationService mutationService,
+            UndoJournal undoJournal,
+            List<Path> scopeRoots,
+            ConfirmationHandler confirmationHandler,
+            Clock clock,
+            FileService fileService,
+            ContentSearchService contentSearchService,
+            FileOpener fileOpener,
+            ProjectService projectService,
+            ProjectProcessRunner projectProcessRunner) {
+        this.appService = java.util.Objects.requireNonNull(appService, "appService");
+        this.fileSearchService = java.util.Objects.requireNonNull(fileSearchService, "fileSearchService");
+        this.systemInfoService = java.util.Objects.requireNonNull(systemInfoService, "systemInfoService");
+        this.historyRepository = java.util.Objects.requireNonNull(historyRepository, "historyRepository");
+        this.executor = java.util.Objects.requireNonNull(executor, "executor");
+        this.parser = new CommandParser(java.util.Objects.requireNonNull(clock, "clock"));
+        this.mutationService = mutationService;
+        this.undoJournal = mutationService == null ? null : java.util.Objects.requireNonNull(undoJournal);
+        this.scopeRoots = scopeRoots == null ? List.of() : List.copyOf(scopeRoots);
+        this.confirmationHandler = confirmationHandler;
+        this.fileService = java.util.Objects.requireNonNull(fileService, "fileService");
+        this.contentSearchService = java.util.Objects.requireNonNull(contentSearchService, "contentSearchService");
+        this.fileOpener = java.util.Objects.requireNonNull(fileOpener, "fileOpener");
+        this.projectService = java.util.Objects.requireNonNull(projectService, "projectService");
+        this.projectProcessRunner = java.util.Objects.requireNonNull(projectProcessRunner, "projectProcessRunner");
+        if (mutationService != null && scopeRoots.isEmpty()) {
+            throw new IllegalArgumentException("mutation support requires at least one scope root");
+        }
     }
 
     /** Sprint 4A composition: adds the contextual file-opener seam. */
@@ -173,22 +221,10 @@ public final class DefaultCommandGateway implements CommandGateway {
             FileService fileService,
             ContentSearchService contentSearchService,
             FileOpener fileOpener) {
-        this.appService = java.util.Objects.requireNonNull(appService, "appService");
-        this.fileSearchService = java.util.Objects.requireNonNull(fileSearchService, "fileSearchService");
-        this.systemInfoService = java.util.Objects.requireNonNull(systemInfoService, "systemInfoService");
-        this.historyRepository = java.util.Objects.requireNonNull(historyRepository, "historyRepository");
-        this.executor = java.util.Objects.requireNonNull(executor, "executor");
-        this.parser = new CommandParser(java.util.Objects.requireNonNull(clock, "clock"));
-        this.mutationService = mutationService;
-        this.undoJournal = mutationService == null ? null : java.util.Objects.requireNonNull(undoJournal);
-        this.scopeRoots = scopeRoots == null ? List.of() : List.copyOf(scopeRoots);
-        this.confirmationHandler = confirmationHandler;
-        this.fileService = java.util.Objects.requireNonNull(fileService, "fileService");
-        this.contentSearchService = java.util.Objects.requireNonNull(contentSearchService, "contentSearchService");
-        this.fileOpener = java.util.Objects.requireNonNull(fileOpener, "fileOpener");
-        if (mutationService != null && scopeRoots.isEmpty()) {
-            throw new IllegalArgumentException("mutation support requires at least one scope root");
-        }
+        this(appService, fileSearchService, systemInfoService, historyRepository, executor,
+                mutationService, undoJournal, scopeRoots, confirmationHandler, clock,
+                fileService, contentSearchService, fileOpener,
+                new FileSystemProjectService(), new MavenProjectProcessRunner());
     }
 
     public SessionState sessionState() {
@@ -294,6 +330,18 @@ public final class DefaultCommandGateway implements CommandGateway {
         }
         if (plan instanceof CommandPlan.OpenSelected) {
             return executeOpenSelected(cancellation);
+        }
+        if (plan instanceof CommandPlan.OpenProject openProject) {
+            return activateProject(openProject.target());
+        }
+        if (plan instanceof CommandPlan.CurrentProject) {
+            return currentProject();
+        }
+        if (plan instanceof CommandPlan.ProjectOperationPlan projectOperation) {
+            return executeProjectOperation(projectOperation.operation());
+        }
+        if (plan instanceof CommandPlan.LastProjectOutcome) {
+            return lastProjectOutcome();
         }
         if (plan instanceof CommandPlan.FileMutation mutation) {
             return executeMutation(mutation, cancellation, requestId, onProgress);
@@ -660,6 +708,83 @@ public final class DefaultCommandGateway implements CommandGateway {
         return new MutationReceipt(preview.kind(), entries);
     }
 
+    // ------------------------------------------------------------------
+    // Sprint 4B: active project context. One active project per session;
+    // file context and project context are independent (activation never
+    // touches search results); a non-zero tool exit is an honest project
+    // result, not a JARVIS failure.
+    // ------------------------------------------------------------------
+
+    /**
+     * Validates and activates the candidate project, then opens it through
+     * the {@link FileOpener} seam. Activation only succeeds when the open
+     * action succeeds — JARVIS never claims an activation it could not
+     * actually show the user.
+     */
+    private CommandResult activateProject(String target) throws ServiceException {
+        if (target == null || target.isBlank()) {
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND, "Usage: open project <path or name>"));
+        }
+        Path candidate = Path.of(target.strip());
+        ProjectContext activated = projectService.activate(candidate);
+        try {
+            fileOpener.open(activated.root(), CancellationToken.NONE);
+        } catch (ServiceException e) {
+            throw new ServiceException(error(
+                    ErrorCode.IO_FAILURE,
+                    "The project was validated but could not be opened: " + e.error().message()));
+        }
+        sessionState.setActiveProject(activated);
+        return activated;
+    }
+
+    /** The active project; a missing one is an honest rejection, not a guess. */
+    private ProjectContext requireActiveProject() throws ServiceException {
+        ProjectContext project = sessionState.activeProject().orElse(null);
+        if (project == null) {
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND,
+                    "No active project; use 'open project <path>' first"));
+        }
+        if (!Files.isDirectory(project.root(), LinkOption.NOFOLLOW_LINKS)) {
+            sessionState.clearActiveProject();
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND,
+                    "The active project folder is no longer present: " + project.root()));
+        }
+        if (!Files.isRegularFile(project.descriptorPath(), LinkOption.NOFOLLOW_LINKS)) {
+            sessionState.clearActiveProject();
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND,
+                    "The active project descriptor is no longer present: " + project.descriptorPath()));
+        }
+        return project;
+    }
+
+    private CommandResult currentProject() throws ServiceException {
+        return requireActiveProject();
+    }
+
+    /**
+     * Runs one typed operation against the active project through the
+     * bounded runner. A tool exit code is a real project result; only a
+     * process that cannot start becomes a rejection. The outcome is stored
+     * for "what happened" regardless of success or failure.
+     */
+    private CommandResult executeProjectOperation(ProjectOperation operation) throws ServiceException {
+        ProjectContext project = requireActiveProject();
+        ProjectOperationResult result = projectProcessRunner.execute(project, operation);
+        sessionState.setLastProjectOperation(result);
+        return result;
+    }
+
+    /** The most recent project operation; absence is reported, not invented. */
+    private CommandResult lastProjectOutcome() {
+        ProjectOperationResult last = sessionState.lastProjectOperation().orElse(null);
+        return last == null ? ProjectOutcomeReport.none() : ProjectOutcomeReport.of(last);
+    }
+
     /** Clears the pending confirmation without any filesystem effect. */
     private CommandResult cancelPendingMutation() throws ServiceException {
         PendingConfirmation cancelled;
@@ -1011,6 +1136,8 @@ public final class DefaultCommandGateway implements CommandGateway {
         private volatile FileSearchResult lastSearchResult;
         private volatile FileSearchQuery lastSearchQuery;
         private volatile SelectedFileResult selection;
+        private volatile ProjectContext activeProject;
+        private volatile ProjectOperationResult lastProjectOperation;
 
         public Optional<FileSearchResult> lastSearchResult() {
             return Optional.ofNullable(lastSearchResult);
@@ -1023,6 +1150,30 @@ public final class DefaultCommandGateway implements CommandGateway {
         /** The explicit selection, if one is currently valid. */
         public Optional<SelectedFileResult> selection() {
             return Optional.ofNullable(selection);
+        }
+
+        /** The active project of this session, if one was activated. */
+        public Optional<ProjectContext> activeProject() {
+            return Optional.ofNullable(activeProject);
+        }
+
+        /** The most recent project operation of this session, if any ran. */
+        public Optional<ProjectOperationResult> lastProjectOperation() {
+            return Optional.ofNullable(lastProjectOperation);
+        }
+
+        void setActiveProject(ProjectContext project) {
+            this.activeProject = project;
+            this.lastProjectOperation = null;
+        }
+
+        void setLastProjectOperation(ProjectOperationResult result) {
+            this.lastProjectOperation = result;
+        }
+
+        void clearActiveProject() {
+            this.activeProject = null;
+            this.lastProjectOperation = null;
         }
 
         void setSearchResult(FileSearchResult result, FileSearchQuery query) {

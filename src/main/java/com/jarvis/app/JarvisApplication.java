@@ -116,7 +116,9 @@ public final class JarvisApplication extends Application {
                     Clock.systemUTC(),
                     new com.jarvis.services.files.FileSystemFileService(),
                     new com.jarvis.services.files.ContentSearchService(),
-                    new DesktopFileOpener());
+                    new DesktopFileOpener(),
+                    new com.jarvis.services.project.FileSystemProjectService(),
+                    new com.jarvis.services.project.MavenProjectProcessRunner());
             commandUI = new CommandUI(gateway);
             commandUI.setSearchScope(configuration.scopeDescription());
             commandUI.setVoicePanel(buildVoiceStack(configuration));

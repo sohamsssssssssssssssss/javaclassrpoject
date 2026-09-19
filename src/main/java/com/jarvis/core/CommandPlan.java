@@ -135,4 +135,33 @@ public sealed interface CommandPlan {
     /** Cancels the pending confirmation without any filesystem effect. */
     record CancelPending() implements CommandPlan {
     }
+
+    /**
+     * Activates a project by name or path. The target is resolved and
+     * validated by the project service (directory + supported descriptor);
+     * the parser never invents machine-specific locations.
+     */
+    record OpenProject(String target) implements CommandPlan {
+        public OpenProject {
+            Objects.requireNonNull(target, "target");
+        }
+    }
+
+    /** Reports the currently active project of this session. */
+    record CurrentProject() implements CommandPlan {
+    }
+
+    /**
+     * Runs a typed project operation against the active project. The verb
+     * itself carries the project intent — "build it" never refers to a file.
+     */
+    record ProjectOperationPlan(com.jarvis.api.ProjectOperation operation) implements CommandPlan {
+        public ProjectOperationPlan {
+            Objects.requireNonNull(operation, "operation");
+        }
+    }
+
+    /** Reports the most recent project operation of this session, if any. */
+    record LastProjectOutcome() implements CommandPlan {
+    }
 }

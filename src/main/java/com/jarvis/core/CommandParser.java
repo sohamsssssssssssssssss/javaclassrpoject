@@ -78,7 +78,29 @@ public final class CommandParser {
         String first = keyword(tokens.getFirst());
         switch (first) {
             case "open" -> {
+                if (tokens.size() >= 3 && keyword(tokens.get(1)).equals("project")) {
+                    return new CommandPlan.OpenProject(join(tokens.subList(2, tokens.size())).strip());
+                }
                 return parseOpen(tokens);
+            }
+            case "run" -> {
+                // "run [the] tests" — the only project verb besides build.
+                int subject = 1;
+                if (tokens.size() > 1 && keyword(tokens.get(1)).equals("the")) {
+                    subject = 2;
+                }
+                if (tokens.size() == subject + 1 && keyword(tokens.get(subject)).equals("tests")) {
+                    return new CommandPlan.ProjectOperationPlan(com.jarvis.api.ProjectOperation.TEST);
+                }
+                throw invalid("Usage: run [the] tests");
+            }
+            case "build" -> {
+                // The project-build verb: "build it" refers to the active
+                // project, never to the contextual file selection.
+                if (tokens.size() == 2 && keyword(tokens.get(1)).equals("it")) {
+                    return new CommandPlan.ProjectOperationPlan(com.jarvis.api.ProjectOperation.BUILD);
+                }
+                throw invalid("Usage: build it");
             }
             case "only" -> {
                 return parseRefinement(tokens);
@@ -138,10 +160,22 @@ public final class CommandParser {
                 throw invalid("Usage: file info <name>");
             }
             case "what" -> {
+                if (tokens.size() == 2 && keyword(tokens.get(1)).equals("happened")) {
+                    return new CommandPlan.LastProjectOutcome();
+                }
+                if (tokens.size() == 6
+                        && keyword(tokens.get(1)).equals("project")
+                        && keyword(tokens.get(2)).equals("am")
+                        && keyword(tokens.get(3)).equals("i")
+                        && keyword(tokens.get(4)).equals("working")
+                        && keyword(tokens.get(5)).equals("on")) {
+                    return new CommandPlan.CurrentProject();
+                }
                 if (tokens.size() == 3 && keyword(tokens.get(1)).equals("is")) {
                     return new CommandPlan.FileInfo(tokens.get(2).value().strip());
                 }
-                throw invalid("Unsupported command. Try 'what is <file name>' for file details");
+                throw invalid("Unsupported command. Try 'what is <file name>', "
+                        + "'what project am I working on', or 'what happened'");
             }
             default -> {
                 if (matches(tokens, "system", "status") || matches(tokens, "status")) {
