@@ -1,5 +1,27 @@
 # Status
 
+## Sprint 4 file intelligence + document content search (2026-09-19)
+
+- **Composition (open item D):** the verified service layer (FileService/FileSystemFileService, DocumentExtractionService, ContentSearchService) is ported into this module under `com.jarvis.services.files` (the established porting pattern) and composed in `JarvisApplication.startAssistant` through a new additive `DefaultCommandGateway` constructor. No parallel framework was created.
+- **Command routes (open item E):** `list files`, `file info <name>` / `what is <name>`, and `find <ext> [files] containing "text"`. The first two reuse `FileSearchResult` (so the context engine and UI renderer work unchanged); content search returns the new `ContentSearchResult` (one `DocumentHit` per document). Mutations deliberately keep flowing through `ScopedFileMutationService` + confirmation — `FileService` mutations are not routed to avoid bypassing the tested safety/undo layer.
+- **Safety preserved:** the 100-document content-search limit is enforced by the service, not widened by the gateway; content search requires a previous search in the session and uses the shared session context; failed extractions surface per document (`extractionFailed` + structured reason) and never masquerade as zero matches; file-info name lookup is scope-confined and rejects missing/ambiguous names.
+- **Tests (open item G, non-GUI path):** new `SprintFourPipelineTest` drives the real gateway with SQLite history: list→move composition, file info (incl. case-insensitive lookup and rejection), TXT/PDF/DOCX content search with programmatic fixtures through the real Tika/PDFBox/POI paths, unreadable-document distinction, no-previous-search rejection, malformed grammar rejection, and history persistence of routed commands.
+- **UI (open item F):** `CommandUI` renders `ContentSearchResult` (matches with snippets, per-document read failures, total, applied limits) as an additive sealed-switch case; no business logic in UI handlers.
+- **Shaded jar:** added Tika `Parser`/`Detector` `META-INF/services` appending transformers so PDF/DOCX parsers survive shading.
+
+## Sprint 3 voice integration (2026-09-19)
+
+- **Audio feasibility gate: ALL CHECKS PASSED on-target** (docs/AUDIO_FEASIBILITY.md §6): mic capture, offline Vosk STT, speaker x-vector identification and macOS `say` TTS all verified on macOS 27 ARM64 / OpenJDK 25.0.2.
+- **Blocking issue found and fixed by pinning:** vosk 0.3.45's Java binding requires `vosk_recognizer_set_grm`, absent from the bundled darwin dylib → `UnsatisfiedLinkError` on every model load. Pinned **com.alphacephei:vosk:0.3.38**, whose binding matches the same universal (x86_64+arm64) dylib. This is the only viable Maven release for macOS until upstream republishes.
+- Voice stack behind 5 seams in `com.jarvis.services.audio`: `AudioCaptureService` (Java Sound, 16 kHz/16-bit/mono/LE, bounded 100 ms chunks, dedicated thread), `SpeechRecognitionService` (Vosk-backed), `SpeechSynthesisService` (macOS `say`, explicit arg list, voice Samantha, rate 175), `SpeakerIdentificationService` (Vosk x-vectors + cosine ≥ 0.60, SOHAM/VED/UNKNOWN fallback), `WakePhraseDetector` (transcript-based, requires greeting+wake word, tolerates "jervis"/"service"). Vosk types are confined to the audio package; core code never sees them.
+- **Convergence:** voice and text share one pipeline — the STT transcript is submitted to the EXISTING `CommandGateway` as a plain `CommandRequest`; the existing tokenizer/parser/CommandPlan handle it. No second parser exists. Proven end-to-end on real audio: "hello jarvis" → wake → SOHAM (0.7587) → "Good morning, Master Soham…" → "system status" → `CommandPlan.SystemStatus`.
+- `VoiceCommandController` owns the state machine (IDLE/LISTENING/PROCESSING/EXECUTING/SPEAKING/ERROR) on a dedicated session thread; the JavaFX thread only receives state/transcript callbacks. Utterances end on a 1.2 s quiet window, 12 s cap, 8 MB bounded buffer.
+- Speaker enrollment: 3 utterances per identity → mean x-vector persisted to `<data dir>/speakers/*.spk` via `SpeakerProfileStore` (atomic writes, reloadable). No live-mic enrollment command yet; profiles are written through the service API.
+- UI: minimal `VoicePanel` strip (start button, state, transcript, speaker) inserted above the results area; no layout redesign; never blocks the FX thread.
+- Config: `jarvis.audio.model.dir`/`JARVIS_AUDIO_MODEL_DIR` (required for voice), `jarvis.audio.spk.model.dir`/`JARVIS_AUDIO_SPK_MODEL_DIR` (optional; enables speaker ID). Without the model, JARVIS runs unchanged and voice shows "unavailable".
+- Tests: **128 passing (84 previous + 44 new)** — wake matching, greeting boundaries on a pinned clock, speaker threshold/UNKNOWN fallback (fake vectors), transcript forwarding/voice-text convergence (fake gateway), TTS argument determinism + platform guard, TextJson parsing, profile store persistence in temp dirs, bounded chunk listener. No test requires a microphone, model or native library.
+- Limitations: TTS macOS-only; speaker threshold calibrated on `say`-voice stand-ins; no streaming partials in UI; wake detection inherits STT mishearings (documented ones handled).
+
 ## Sprint 1 integration
 
 - Branch/worktree: `integration/sprint1` / `jarvis-integration`.
@@ -13,3 +35,14 @@
 - A temporary Java-only GUI smoke harness submitted `system status` through `CommandUI` into the real gateway/OSHI service and observed accurate OS, architecture, CPU and memory labels. macOS denied synthetic keystrokes, so no manual app-launch command was performed or claimed.
 - Verified toolchain: OpenJDK 25.0.2, Maven 3.9.16, Java 21 release target, macOS 27.0 ARM64. JDK 21+ and Maven 3.9+ remain the documented build minimum.
 - Voice and speaker identity are not implemented; their Java-only feasibility gate is next.
+
+## Sprint 2 integration (2026-09-18/19)
+
+- File intelligence implemented on the same pipeline: generalized bounded find (known extensions with plural forms, larger/smaller with kb/mb/gb, date windows "today"/"yesterday"/"this week"/"this month"/"on <weekday>" against an injected Clock), `create folder called <name>`, `move/copy these [files] to <folder>`, `rename the newest to <name>` and `undo`.
+- New `ScopedFileMutationService`: scope-confined (configured roots only, symlinks never followed, no `..` traversal), never overwrites (`TARGET_EXISTS`), atomic-move with fallback, refuses directory-into-descendant operations, and journals every reversible move/rename. No delete capability exists anywhere in the codebase.
+- Confirmation flow: every mutation builds a full preview (per-file source → target list) and asks exactly once through the `ConfirmationHandler` seam; the JavaFX app wires a modal dialog, tests script decisions. Denial → structured REJECTED, zero filesystem effect; no handler configured → CONFIRMATION_REQUIRED rejection.
+- Undo: SQLite migration 002 (`undo_entries`, `PRAGMA user_version = 2`), one row per operation with per-row status so repeat undo is idempotent. Copies and folder creation are deliberately not undoable and the UI says so. Undo moves are scope-checked and never overwrite an occupied original location.
+- Minimal context engine: the last successful search of the session is the selection for "move these…"/"rename the newest…"; it is cleared after every mutation or undo. Commands without a prior search are structured rejections.
+- UI renders mutation receipts per file (applied/failed + reason) and undo rows; prompt text shows the new commands.
+- Tests: 84 passing (50 sprint 1 + 34 new: parser filters/date windows with pinned clock, mutation service safety matrix, undo-journal persistence incl. reopen and idempotent status marks, and a sprint-two pipeline test covering confirm → mutate → undo, denial, copy-not-undoable, session invalidation, and CONFIRMATION_REQUIRED without a handler). `mvn -DskipTests package` produced `target/jarvis.jar`.
+- Docs/audio gate: docs/AUDIO_FEASIBILITY.md records STT/TTS/speaker-ID research (Vosk Maven artifact, model licences/sizes, macOS `say` adapter recommendation) and the sprint 3 on-target checklist that must pass before any voice code reaches the gateway.
