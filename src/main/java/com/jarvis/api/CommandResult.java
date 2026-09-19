@@ -8,5 +8,8 @@ public sealed interface CommandResult permits
         HistoryResult,
         MutationReceipt,
         UndoResult,
-        ContentSearchResult {
+        ContentSearchResult,
+        SelectedFileResult,
+        FileMutationPreview,
+        CancellationReceipt {
 }

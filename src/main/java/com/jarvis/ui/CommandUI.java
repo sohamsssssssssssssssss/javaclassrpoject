@@ -134,6 +134,15 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             case MutationReceipt mutation -> showMutation(mutation);
             case UndoResult undo -> showUndo(undo);
             case ContentSearchResult content -> showContentSearch(content);
+            case SelectedFileResult selected -> {
+                showMessage("✓ " + selected.fileName() + "  (" + selected.sizeBytes() + " bytes)", "text-accent");
+                showMessage(selected.path().toString(), "label-subtle");
+            }
+            case FileMutationPreview preview -> {
+                showMessage("⏸ " + preview.pending().originalCommand(), "text-accent");
+                showMessage("Type 'confirm' to apply, or 'cancel' to discard.", "label-subtle");
+            }
+            case CancellationReceipt cancelled -> showMessage(cancelled.message(), "label-subtle");
         }
     }
 

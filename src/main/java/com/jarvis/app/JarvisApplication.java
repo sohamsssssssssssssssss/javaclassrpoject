@@ -115,7 +115,8 @@ public final class JarvisApplication extends Application {
                     new DialogConfirmationHandler(),
                     Clock.systemUTC(),
                     new com.jarvis.services.files.FileSystemFileService(),
-                    new com.jarvis.services.files.ContentSearchService());
+                    new com.jarvis.services.files.ContentSearchService(),
+                    new DesktopFileOpener());
             commandUI = new CommandUI(gateway);
             commandUI.setSearchScope(configuration.scopeDescription());
             commandUI.setVoicePanel(buildVoiceStack(configuration));
@@ -128,6 +129,38 @@ public final class JarvisApplication extends Application {
         } catch (RuntimeException e) {
             closeRuntime();
             showStartupFailure(stage, e);
+        }
+    }
+
+    /**
+     * Opens one concrete scope file with the host platform's default
+     * handler. Deliberately minimal: the path arrives fully resolved from
+     * the gateway and is never reinterpreted here.
+     */
+    private static final class DesktopFileOpener implements com.jarvis.api.FileOpener {
+        @Override
+        public void open(java.nio.file.Path path, com.jarvis.api.CancellationToken cancellation)
+                throws com.jarvis.api.ServiceException {
+            String os = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
+            java.util.List<String> command;
+            if (os.contains("mac")) {
+                command = java.util.List.of("/usr/bin/open", path.toString());
+            } else if (os.contains("linux")) {
+                command = java.util.List.of("xdg-open", path.toString());
+            } else {
+                throw new com.jarvis.api.ServiceException(new com.jarvis.api.StructuredError(
+                        com.jarvis.api.ErrorCode.UNSUPPORTED_PLATFORM,
+                        "Opening files is not supported on this platform",
+                        java.util.Optional.empty()));
+            }
+            try {
+                new ProcessBuilder(command).start();
+            } catch (java.io.IOException e) {
+                throw new com.jarvis.api.ServiceException(new com.jarvis.api.StructuredError(
+                        com.jarvis.api.ErrorCode.IO_FAILURE,
+                        "Could not open " + path.getFileName(),
+                        java.util.Optional.ofNullable(e.getMessage())));
+            }
         }
     }
 

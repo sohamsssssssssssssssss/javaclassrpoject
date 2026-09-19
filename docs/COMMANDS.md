@@ -21,8 +21,13 @@ The voice strip shows the current state (IDLE, LISTENING, PROCESSING, EXECUTING,
 | Create folder | `create folder called <name>` |
 | Move selection | `move these [files] to <folder>` (acts on the last search of the session; creates the destination folder after confirmation if missing) |
 | Copy selection | `copy these [files] to <folder>` |
-| Rename newest | `rename the newest to <name>` (extension preserved when omitted) |
-| Undo | `undo` (reverses the latest journalled move/rename command, row by row, never overwriting) |
+| Rename selection | `rename the newest to <name>`, `rename the oldest to <name>` (extension preserved when omitted) |
+| Refine last search | `only larger|bigger than <n> <unit>`, `only smaller than <n> <unit>`, `only from today|yesterday|this week|<weekday>`, `only before <phrase>`, `only <ext>[s] [files]`; clauses combine — every constraint not restated is inherited from the previous search of this session (a restated dimension replaces the old one; the previous sentence is never re-parsed) |
+| Select + open | `open the newest`, `open the oldest` (deterministic: latest/earliest modification time, ties broken by highest absolute path string; the file is selected and opened) |
+| Open selection | `open it`, `open the file` (opens the single contextual file referent) |
+| Move/copy referent | `move|copy the newest|the oldest|it|that [file] to <folder>` — `it`/`that file` need exactly one valid referent (the explicit selection, or the sole file of the current result set) and fail honestly otherwise |
+| Confirm pending | `confirm`, `cancel` (handler-less runs: a mutation first returns its exact preview with no filesystem effect; `confirm` executes precisely the previewed typed operations; `cancel` discards; a second `confirm` rejects) |
+| Undo | `undo`, `undo that` (reverses the latest journalled move/rename command, row by row, never overwriting) |
 | List scope files | `list files` (top-level regular files of the configured scope; acts like a search for `move these files …` selection) |
 | File info | `file info <name>`; also `what is <name>` (case-insensitive name lookup inside the scope) |
 | Content search | `find <ext> [files] containing "text"` (extracts text from the files of the last search of this session — TXT, PDF, DOCX and other Tika-supported formats — and matches the quoted phrase case-insensitively; at most 100 documents per search; unreadable documents are reported, not silently skipped) |

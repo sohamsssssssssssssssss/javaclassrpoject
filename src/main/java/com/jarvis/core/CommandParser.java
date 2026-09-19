@@ -54,6 +54,8 @@ public final class CommandParser {
     private static final Set<String> FULL_DATE_PHRASES = prefixed(
             Set.of("today", "yesterday", "this week", "this month"), WEEKDAYS);
 
+
+
     private final CommandTokenizer tokenizer = new CommandTokenizer();
     private final Clock clock;
 
@@ -77,6 +79,21 @@ public final class CommandParser {
         switch (first) {
             case "open" -> {
                 return parseOpen(tokens);
+            }
+            case "only" -> {
+                return parseRefinement(tokens);
+            }
+            case "confirm" -> {
+                if (tokens.size() == 1) {
+                    return new CommandPlan.ConfirmPending();
+                }
+                throw invalid("Usage: confirm");
+            }
+            case "cancel" -> {
+                if (tokens.size() == 1) {
+                    return new CommandPlan.CancelPending();
+                }
+                throw invalid("Usage: cancel");
             }
             case "find" -> {
                 for (int index = 2; index < tokens.size(); index++) {
@@ -102,7 +119,11 @@ public final class CommandParser {
                 if (tokens.size() == 1) {
                     return new CommandPlan.Undo();
                 }
-                throw invalid("Usage: undo");
+                if (tokens.size() == 2 && keyword(tokens.get(1)).equals("that")) {
+                    // "undo that" is the conversational form of "undo".
+                    return new CommandPlan.Undo();
+                }
+                throw invalid("Usage: undo [that]");
             }
             case "list" -> {
                 if (matches(tokens, "list", "files")) {
@@ -137,6 +158,27 @@ public final class CommandParser {
     private CommandPlan parseOpen(List<CommandTokenizer.Token> tokens) throws CommandParseException {
         if (tokens.size() < 2) {
             throw invalid("Usage: open <configured app>");
+        }
+        // Contextual file selectors share the "open" verb. They are matched
+        // first so a scope file named like an app can never shadow them and
+        // an app named "it" can never hijack the pronoun.
+        if (tokens.size() == 2 && keyword(tokens.get(1)).equals("it")) {
+            return new CommandPlan.OpenSelected();
+        }
+        if (tokens.size() == 3 && keyword(tokens.get(1)).equals("the")) {
+            switch (keyword(tokens.get(2))) {
+                case "newest", "oldest" -> {
+                    return new CommandPlan.SelectFile(keyword(tokens.get(2)).equals("newest")
+                            ? CommandPlan.SelectFile.Target.NEWEST
+                            : CommandPlan.SelectFile.Target.OLDEST);
+                }
+                case "file" -> {
+                    return new CommandPlan.OpenSelected();
+                }
+                default -> {
+                    // Fall through to application opening below.
+                }
+            }
         }
         String requested = join(tokens.subList(1, tokens.size()));
         if (requested.isBlank()) {
@@ -292,6 +334,78 @@ public final class CommandParser {
     private record DateWindow(Instant start, Optional<Instant> end) {
     }
 
+    /**
+     * Parses a context refinement ({@code "only …"}) of the most recent
+     * successful search. Grammar: {@code [larger|smaller than N unit]
+     * [from|after|since|before DATE] [<extension>[s] [files]]} — each
+     * recognized clause replaces that constraint dimension, while every
+     * constraint not mentioned is inherited from the previous structured
+     * query by the gateway. The previous sentence is never re-parsed.
+     */
+    private CommandPlan parseRefinement(List<CommandTokenizer.Token> tokens) throws CommandParseException {
+        if (tokens.size() < 2) {
+            throw invalid("Usage: only larger|smaller than <size>, only from <date>, or only <type> [files]");
+        }
+        OptionalLong minimum = OptionalLong.empty();
+        OptionalLong maximum = OptionalLong.empty();
+        Optional<Instant> after = Optional.empty();
+        Optional<Instant> before = Optional.empty();
+        Set<String> extensions = null;
+        int index = 1;
+        while (index < tokens.size()) {
+            String word = keyword(tokens.get(index));
+            switch (word) {
+                case "larger", "bigger", "smaller" -> {
+                    boolean larger = !word.equals("smaller");
+                    if (index + 4 > tokens.size() || !keyword(tokens.get(index + 1)).equals("than")) {
+                        throw invalid("Usage: only " + word + " than <number> <unit>");
+                    }
+                    long amount = parseAmount(tokens.get(index + 2).value());
+                    long unit = parseUnit(keyword(tokens.get(index + 3)));
+                    long bytes = multiply(amount, unit);
+                    if (larger) {
+                        minimum = OptionalLong.of(bytes);
+                    } else {
+                        maximum = OptionalLong.of(bytes);
+                    }
+                    index += 4;
+                }
+                case "from", "after", "since" -> {
+                    DatePhrase phrase = consumeDatePhrase(tokens, index + 1);
+                    DateWindow window = resolveWindow(phrase.phrase());
+                    after = Optional.of(window.start());
+                    if (window.end().isPresent() && before.isEmpty()) {
+                        before = window.end();
+                    }
+                    index = phrase.endIndex();
+                }
+                case "before" -> {
+                    DatePhrase phrase = consumeDatePhrase(tokens, index + 1);
+                    before = Optional.of(resolveWindow(phrase.phrase()).start());
+                    index = phrase.endIndex();
+                }
+                default -> {
+                    String extension = singularExtension(word);
+                    if (extension.isEmpty()) {
+                        throw invalid("Unsupported refinement: " + tokens.get(index).value());
+                    }
+                    extensions = Set.of(extension);
+                    index++;
+                    if (index < tokens.size() && keyword(tokens.get(index)).equals("files")) {
+                        index++;
+                    }
+                }
+            }
+        }
+        if (extensions == null && minimum.isEmpty() && maximum.isEmpty()
+                && after.isEmpty() && before.isEmpty()) {
+            throw invalid("Nothing to refine; try: only larger than 20 MB, only from today, or only PDFs");
+        }
+        return new CommandPlan.RefineSearch(new FileSearchQuery.Refinement(
+                extensions == null ? Optional.empty() : Optional.of(extensions),
+                minimum, maximum, after, before));
+    }
+
     private CommandPlan parseCreate(List<CommandTokenizer.Token> tokens) throws CommandParseException {
         if (tokens.size() != 4 || !keyword(tokens.get(1)).equals("folder")
                 || !keyword(tokens.get(2)).equals("called")) {
@@ -311,28 +425,59 @@ public final class CommandParser {
 
     private CommandPlan parseTransfer(List<CommandTokenizer.Token> tokens, CommandPlan.FileMutation.Kind kind)
             throws CommandParseException {
-        if (tokens.size() < 3 || !keyword(tokens.get(1)).equals("these")) {
-            throw invalid("Usage: " + kind.name().toLowerCase(Locale.ROOT)
-                    + " these [files] to <folder>");
+        String verb = kind.name().toLowerCase(Locale.ROOT);
+        if (tokens.size() < 3) {
+            throw invalid("Usage: " + verb + " these [files] to <folder>");
         }
-        int index = 2;
-        if (keyword(tokens.get(index)).equals("files")) {
-            index++;
+        int index;
+        CommandPlan.FileMutation.Selection selection;
+        switch (keyword(tokens.get(1))) {
+            case "these" -> {
+                index = 2;
+                if (keyword(tokens.get(index)).equals("files")) {
+                    index++;
+                }
+                selection = CommandPlan.FileMutation.Selection.LAST_RESULT;
+            }
+            case "the" -> {
+                if (tokens.size() < 3) {
+                    throw invalid("Usage: " + verb + " the newest|oldest|file to <folder>");
+                }
+                switch (keyword(tokens.get(2))) {
+                    case "newest" -> {
+                        selection = CommandPlan.FileMutation.Selection.NEWEST;
+                        index = 3;
+                    }
+                    case "oldest" -> {
+                        selection = CommandPlan.FileMutation.Selection.OLDEST;
+                        index = 3;
+                    }
+                    case "file" -> {
+                        selection = CommandPlan.FileMutation.Selection.SELECTED;
+                        index = 3;
+                    }
+                    default -> throw invalid("Usage: " + verb + " the newest|oldest|file to <folder>");
+                }
+            }
+            case "it" -> {
+                selection = CommandPlan.FileMutation.Selection.SELECTED;
+                index = 2;
+            }
+            case "that" -> {
+                selection = CommandPlan.FileMutation.Selection.SELECTED;
+                index = tokens.size() >= 3 && keyword(tokens.get(2)).equals("file") ? 3 : 2;
+            }
+            default -> throw invalid("Usage: " + verb + " these [files]|the newest|the oldest|it to <folder>");
         }
         if (index >= tokens.size() || !keyword(tokens.get(index)).equals("to") || index + 1 >= tokens.size()) {
-            throw invalid("Usage: " + kind.name().toLowerCase(Locale.ROOT)
-                    + " these [files] to <folder>");
+            throw invalid("Usage: " + verb + " these [files]|the newest|the oldest|it to <folder>");
         }
         String destination = join(tokens.subList(index + 1, tokens.size())).strip();
         if (destination.isEmpty()) {
             throw invalid("Destination folder must not be empty");
         }
         requireSafeName(destination);
-        return new CommandPlan.FileMutation(
-                kind,
-                CommandPlan.FileMutation.Selection.LAST_RESULT,
-                destination,
-                List.of());
+        return new CommandPlan.FileMutation(kind, selection, destination, List.of());
     }
 
     /**
@@ -366,10 +511,14 @@ public final class CommandParser {
 
     private CommandPlan parseRename(List<CommandTokenizer.Token> tokens) throws CommandParseException {
         if (tokens.size() != 5 || !keyword(tokens.get(1)).equals("the")
-                || !keyword(tokens.get(2)).equals("newest")
                 || !keyword(tokens.get(3)).equals("to")) {
-            throw invalid("Usage: rename the newest to <name>");
+            throw invalid("Usage: rename the newest|oldest to <name>");
         }
+        CommandPlan.FileMutation.Selection selection = switch (keyword(tokens.get(2))) {
+            case "newest" -> CommandPlan.FileMutation.Selection.NEWEST;
+            case "oldest" -> CommandPlan.FileMutation.Selection.OLDEST;
+            default -> throw invalid("Usage: rename the newest|oldest to <name>");
+        };
         String newName = tokens.get(4).value().strip();
         if (newName.isEmpty()) {
             throw invalid("New name must not be empty");
@@ -377,7 +526,7 @@ public final class CommandParser {
         requireSafeName(newName);
         return new CommandPlan.FileMutation(
                 CommandPlan.FileMutation.Kind.RENAME,
-                CommandPlan.FileMutation.Selection.NEWEST,
+                selection,
                 newName,
                 List.of());
     }

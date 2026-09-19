@@ -45,4 +45,42 @@ public record FileSearchQuery(
         this(extensions, minimumSizeBytes, OptionalLong.empty(), Optional.empty(), Optional.empty(),
                 maxResults, scanLimit);
     }
+
+    /**
+     * One refinement dimension set of a context follow-up ({@code "only …"}).
+     * An absent dimension is inherited from the previous query; a present
+     * dimension replaces the previous one entirely (a restated date window
+     * replaces start and end together).
+     */
+    public record Refinement(
+            Optional<Set<String>> extensions,
+            OptionalLong minimumSizeBytes,
+            OptionalLong maximumSizeBytes,
+            Optional<Instant> modifiedAfter,
+            Optional<Instant> modifiedBefore) {
+        public Refinement {
+            extensions = Objects.requireNonNull(extensions, "extensions");
+            minimumSizeBytes = Objects.requireNonNull(minimumSizeBytes, "minimumSizeBytes");
+            maximumSizeBytes = Objects.requireNonNull(maximumSizeBytes, "maximumSizeBytes");
+            modifiedAfter = Objects.requireNonNull(modifiedAfter, "modifiedAfter");
+            modifiedBefore = Objects.requireNonNull(modifiedBefore, "modifiedBefore");
+            extensions.ifPresent(Set::copyOf);
+        }
+    }
+
+    /**
+     * Derives the refined query for a context follow-up ({@code "only …"}):
+     * every dimension absent from {@code refinement} is retained from this
+     * query, every present dimension replaces this query's value. Limits are
+     * carried over unchanged.
+     */
+    public FileSearchQuery refined(Refinement refinement) {
+        return new FileSearchQuery(
+                refinement.extensions().orElse(extensions),
+                refinement.minimumSizeBytes(),
+                refinement.maximumSizeBytes(),
+                refinement.modifiedAfter().or(() -> modifiedAfter),
+                refinement.modifiedBefore().or(() -> modifiedBefore),
+                maxResults, scanLimit);
+    }
 }

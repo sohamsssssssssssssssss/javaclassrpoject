@@ -183,14 +183,22 @@ class SprintTwoPipelineTest {
     }
 
     @Test
-    void riskyCommandsAreRejectedWithoutAConfirmationHandler() throws Exception {
+    void withoutAHandlerTheTypedConfirmFlowDefersAndExecutes() throws Exception {
         Path root = prepareDemoFiles();
         try (Runtime runtime = runtime(null)) {
-            CommandOutcome outcome = runtime.submit("create folder called College");
-            assertEquals(CommandStatus.REJECTED, outcome.status());
-            assertEquals(ErrorCode.CONFIRMATION_REQUIRED, outcome.error().orElseThrow().code());
+            CommandOutcome created = runtime.submit("create folder called College");
+            assertEquals(CommandStatus.SUCCEEDED, created.status(), created.summary());
             assertFalse(Files.exists(root.resolve("College")),
-                    "nothing may happen without explicit approval");
+                    "nothing may happen before the typed confirmation");
+
+            CommandOutcome confirmed = runtime.submit("confirm");
+            assertEquals(CommandStatus.SUCCEEDED, confirmed.status(), confirmed.summary());
+            assertTrue(Files.isDirectory(root.resolve("College")));
+
+            CommandOutcome repeat = runtime.submit("confirm");
+            assertEquals(CommandStatus.REJECTED, repeat.status(),
+                    "a second confirm must not repeat the executed operation");
+            assertEquals(ErrorCode.INVALID_COMMAND, repeat.error().orElseThrow().code());
         }
     }
 

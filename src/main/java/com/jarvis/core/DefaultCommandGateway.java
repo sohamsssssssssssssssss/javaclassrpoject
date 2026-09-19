@@ -1,5 +1,6 @@
 package com.jarvis.core;
 
+import com.jarvis.api.CancellationReceipt;
 import com.jarvis.api.AppLaunchReceipt;
 import com.jarvis.api.AppService;
 import com.jarvis.api.CommandGateway;
@@ -13,9 +14,13 @@ import com.jarvis.api.CancellationToken;
 import com.jarvis.api.ErrorCode;
 import com.jarvis.api.ContentSearchResult;
 import com.jarvis.api.FileMatch;
+import com.jarvis.api.FileMutationPreview;
 import com.jarvis.api.FileMutationService;
+import com.jarvis.api.FileOpener;
+import com.jarvis.api.FileSearchQuery;
 import com.jarvis.api.FileSearchResult;
 import com.jarvis.api.FileSearchService;
+import com.jarvis.api.SelectedFileResult;
 import com.jarvis.api.HistoryEntry;
 import com.jarvis.api.HistoryRepository;
 import com.jarvis.api.HistoryResult;
@@ -92,7 +97,13 @@ public final class DefaultCommandGateway implements CommandGateway {
     private final ConfirmationHandler confirmationHandler;
     private final FileService fileService;
     private final ContentSearchService contentSearchService;
+    private final FileOpener fileOpener;
     private final SessionState sessionState = new SessionState();
+    /** Guard for the bounded, ordered context/confirmation state machine. */
+    private final Object stateLock = new Object();
+    private PendingConfirmation pendingConfirmation;
+    private List<PlannedOperation> pendingOperations;
+    private PendingConfirmation lastPendingConfirmation;
     private final ConcurrentHashMap<UUID, Submission> active = new ConcurrentHashMap<>();
     private final AtomicBoolean closed = new AtomicBoolean();
 
@@ -124,7 +135,7 @@ public final class DefaultCommandGateway implements CommandGateway {
                 new FileSystemFileService(), new ContentSearchService());
     }
 
-    /** Sprint 4 composition: adds file-intelligence and document content search. */
+    /** Sprint 4 composition: adds file-intelligence, document content search and file opening. */
     public DefaultCommandGateway(
             AppService appService,
             FileSearchService fileSearchService,
@@ -138,6 +149,30 @@ public final class DefaultCommandGateway implements CommandGateway {
             Clock clock,
             FileService fileService,
             ContentSearchService contentSearchService) {
+        this(appService, fileSearchService, systemInfoService, historyRepository, executor,
+                mutationService, undoJournal, scopeRoots, confirmationHandler, clock,
+                fileService, contentSearchService, (path, cancellation) -> {
+                    throw new ServiceException(error(
+                            ErrorCode.UNSUPPORTED_PLATFORM,
+                            "Opening files is not configured in this build"));
+                });
+    }
+
+    /** Sprint 4A composition: adds the contextual file-opener seam. */
+    public DefaultCommandGateway(
+            AppService appService,
+            FileSearchService fileSearchService,
+            SystemInfoService systemInfoService,
+            HistoryRepository historyRepository,
+            ExecutorService executor,
+            FileMutationService mutationService,
+            UndoJournal undoJournal,
+            List<Path> scopeRoots,
+            ConfirmationHandler confirmationHandler,
+            Clock clock,
+            FileService fileService,
+            ContentSearchService contentSearchService,
+            FileOpener fileOpener) {
         this.appService = java.util.Objects.requireNonNull(appService, "appService");
         this.fileSearchService = java.util.Objects.requireNonNull(fileSearchService, "fileSearchService");
         this.systemInfoService = java.util.Objects.requireNonNull(systemInfoService, "systemInfoService");
@@ -150,6 +185,7 @@ public final class DefaultCommandGateway implements CommandGateway {
         this.confirmationHandler = confirmationHandler;
         this.fileService = java.util.Objects.requireNonNull(fileService, "fileService");
         this.contentSearchService = java.util.Objects.requireNonNull(contentSearchService, "contentSearchService");
+        this.fileOpener = java.util.Objects.requireNonNull(fileOpener, "fileOpener");
         if (mutationService != null && scopeRoots.isEmpty()) {
             throw new IllegalArgumentException("mutation support requires at least one scope root");
         }
@@ -247,11 +283,26 @@ public final class DefaultCommandGateway implements CommandGateway {
             FileSearchResult result = fileSearchService.search(find.query(), cancellation,
                     visited -> emit(onProgress, requestId, ProgressStage.EXECUTING,
                             "Scanning files", visited, OptionalLong.of(find.query().scanLimit())));
-            sessionState.lastSearchResult = result;
+            sessionState.setSearchResult(result, find.query());
             return result;
+        }
+        if (plan instanceof CommandPlan.RefineSearch refine) {
+            return executeRefinement(refine, cancellation, requestId, onProgress);
+        }
+        if (plan instanceof CommandPlan.SelectFile select) {
+            return executeSelection(select, cancellation);
+        }
+        if (plan instanceof CommandPlan.OpenSelected) {
+            return executeOpenSelected(cancellation);
         }
         if (plan instanceof CommandPlan.FileMutation mutation) {
             return executeMutation(mutation, cancellation, requestId, onProgress);
+        }
+        if (plan instanceof CommandPlan.ConfirmPending) {
+            return executePendingMutation(requestId, onProgress);
+        }
+        if (plan instanceof CommandPlan.CancelPending) {
+            return cancelPendingMutation();
         }
         if (plan instanceof CommandPlan.Undo) {
             return executeUndo(cancellation, requestId, onProgress);
@@ -260,7 +311,7 @@ public final class DefaultCommandGateway implements CommandGateway {
             FileSearchResult listed = listScopeFiles();
             // A listing acts like any other search: it seeds the session
             // context so "list files" + "move these files to X" composes.
-            sessionState.lastSearchResult = listed;
+            sessionState.setSearchResult(listed, null);
             return listed;
         }
         if (plan instanceof CommandPlan.FileInfo fileInfo) {
@@ -289,20 +340,32 @@ public final class DefaultCommandGateway implements CommandGateway {
                 "Preparing confirmation preview", 0, OptionalLong.empty());
         // Each planner resolves concrete paths, builds the preview and asks
         // for confirmation before any filesystem effect happens.
-        List<PlannedOperation> operations = switch (plan.selection()) {
-            case ALL_IN_SCOPE -> planCreateFolder(plan);
-            case LAST_RESULT -> planTransfer(plan);
-            case NEWEST -> planRename(plan);
+        // Routing follows the operation kind; every selection (last result,
+        // newest, oldest, explicit selection) is resolved inside the planners.
+        List<PlannedOperation> operations = switch (plan.kind()) {
+            case CREATE_FOLDER -> planCreateFolder(plan);
+            case MOVE, COPY -> planTransfer(plan);
+            case RENAME -> planRename(plan);
         };
         emit(onProgress, requestId, ProgressStage.EXECUTING, "Applying file operations",
                 0, OptionalLong.empty());
+        if (confirmationHandler == null) {
+            // Typed follow-up flow (sprint 4A): with no handler seam the
+            // exact preview and operations are stored; they run only on the
+            // structured "confirm", never re-parsed or re-resolved.
+            synchronized (stateLock) {
+                pendingConfirmation = lastPendingConfirmation;
+                pendingOperations = List.copyOf(operations);
+            }
+            return new FileMutationPreview(lastPendingConfirmation);
+        }
         List<MutationReceipt.Entry> entries = new ArrayList<>();
         for (PlannedOperation operation : operations) {
             cancelled(cancellation);
             entries.add(operation.apply(requestId, mutationService));
         }
         // Cached search results no longer reflect the filesystem.
-        sessionState.lastSearchResult = null;
+        sessionState.invalidateSearchResult();
         // A command whose every planned operation failed is a rejected
         // command, not a silent success: surface the first structured error.
         // Partial failures stay SUCCEEDED with per-entry truth in the receipt.
@@ -437,19 +500,23 @@ public final class DefaultCommandGateway implements CommandGateway {
                     ErrorCode.INVALID_COMMAND, "The previous search found no files to "
                     + (move ? "move" : "copy")));
         }
+        FileSearchResult refined = switch (plan.selection()) {
+            case LAST_RESULT, ALL_IN_SCOPE -> source;
+            default -> resolveRefinementFiles(plan.selection(), source);
+        };
         Path destinationFolder = resolveDestinationFolder(plan.name());
         boolean createDestination = !Files.isDirectory(destinationFolder, LinkOption.NOFOLLOW_LINKS);
         List<PlannedOperation> operations = new ArrayList<>();
         if (createDestination) {
             operations.add(PlannedOperation.createFolder(destinationFolder));
         }
-        for (FileMatch match : source.matches()) {
+        for (FileMatch match : refined.matches()) {
             operations.add(PlannedOperation.transfer(
                     move ? MutationKind.MOVE : MutationKind.COPY,
                     match.path(),
                     destinationFolder.resolve(match.fileName())));
         }
-        int files = source.matches().size();
+        int files = refined.matches().size();
         String description = (move ? "Move " : "Copy ") + (files == 1 ? "1 file" : files + " files")
                 + " into " + destinationFolder
                 + (createDestination ? " (folder will be created)" : "");
@@ -458,12 +525,199 @@ public final class DefaultCommandGateway implements CommandGateway {
                 move ? MutationKind.MOVE : MutationKind.COPY,
                 move ? RiskLevel.HIGH : RiskLevel.MEDIUM,
                 destinationFolder.toString(),
-                source.matches().stream()
+                refined.matches().stream()
                         .map(match -> new PendingConfirmation.PlannedFile(
                                 match.path(), destinationFolder.resolve(match.fileName())))
                         .toList());
         requireConfirmed(pending);
         return operations;
+    }
+
+    // ------------------------------------------------------------------
+    // Sprint 4A: conversational context (refinement, selection, pronouns,
+    // typed confirmation follow-up). All state transitions are serialized
+    // on {@link #stateLock}; execution itself stays outside the lock.
+    // ------------------------------------------------------------------
+
+    /**
+     * Runs the refined search: constraints not restated by the refinement
+     * plan are inherited from the stored previous query (never from text),
+     * the replacement search is executed, and the result becomes the new
+     * current result set (clearing any explicit selection that dropped out).
+     */
+    private CommandResult executeRefinement(
+            CommandPlan.RefineSearch plan,
+            Submission cancellation,
+            UUID requestId,
+            Consumer<ProgressEvent> onProgress) throws ServiceException {
+        FileSearchQuery previous = sessionState.lastSearchQuery()
+                .orElseThrow(() -> new ServiceException(error(
+                        ErrorCode.INVALID_COMMAND,
+                        "No previous search to refine; run a find command first")));
+        FileSearchQuery.Refinement refinement = plan.refinement();
+        FileSearchQuery combined = previous.refined(refinement);
+        emit(onProgress, requestId, ProgressStage.EXECUTING, "Scanning files", 0, OptionalLong.empty());
+        FileSearchResult result = fileSearchService.search(combined, cancellation,
+                visited -> emit(onProgress, requestId, ProgressStage.EXECUTING,
+                        "Scanning files", visited, OptionalLong.of(combined.scanLimit())));
+        sessionState.setSearchResult(result, combined);
+        return result;
+    }
+
+    /**
+     * Deterministically selects the newest or oldest file of the current
+     * result set, stores it as the explicit selection, and opens it. Ordering
+     * is by last-modified time; equal timestamps tie-break by absolute path
+     * string so the choice never depends on filesystem iteration order.
+     */
+    private CommandResult executeSelection(CommandPlan.SelectFile plan, Submission cancellation)
+            throws ServiceException {
+        FileSearchResult source = requireLastResult();
+        if (source.matches().isEmpty()) {
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND, "The current result set is empty; nothing to select"));
+        }
+        Comparator<FileMatch> byAge = Comparator.comparing(FileMatch::modifiedAt);
+        Comparator<FileMatch> deterministic = plan.target() == CommandPlan.SelectFile.Target.NEWEST
+                ? byAge.thenComparing(match -> match.path().toString())
+                : byAge.thenComparing(match -> match.path().toString()).reversed();
+        FileMatch chosen = source.matches().stream().max(deterministic).orElseThrow();
+        SelectedFileResult selected = new SelectedFileResult(
+                chosen.path(), chosen.fileName(), chosen.sizeBytes(), chosen.modifiedAt());
+        sessionState.setSelection(selected);
+        // "open the newest" is an open command: the selection is both stored
+        // for pronoun follow-ups and handed to the platform opener seam.
+        if (!Files.exists(chosen.path(), LinkOption.NOFOLLOW_LINKS)) {
+            sessionState.clearSelection();
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND,
+                    "The selected file is no longer present: " + chosen.path()));
+        }
+        requireInScope(chosen.path().toAbsolutePath().normalize());
+        fileOpener.open(chosen.path(), cancellation);
+        return selected;
+    }
+
+    /**
+     * Opens the single contextual file referent: the explicit selection when
+     * present, otherwise the sole file of the current result set. Ambiguous
+     * or missing referents are honest rejections, never guesses.
+     */
+    private CommandResult executeOpenSelected(Submission cancellation) throws ServiceException {
+        SelectedFileResult target = sessionState.referent();
+        if (target == null) {
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND,
+                    "No single file is selected; use 'open the newest' or select one file first"));
+        }
+        if (!Files.exists(target.path(), LinkOption.NOFOLLOW_LINKS)) {
+            sessionState.clearSelection();
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND,
+                    "The selected file is no longer present: " + target.path()));
+        }
+        requireInScope(target.path().toAbsolutePath().normalize());
+        fileOpener.open(target.path(), cancellation);
+        return target;
+    }
+
+    /**
+     * Executes the exact pending confirmed operation: the typed operations
+     * resolved and previewed when the mutation command ran. Nothing is
+     * re-parsed and no path is re-resolved.
+     */
+    private CommandResult executePendingMutation(
+            UUID requestId,
+            Consumer<ProgressEvent> onProgress) throws ServiceException {
+        List<PlannedOperation> operations;
+        PendingConfirmation preview;
+        synchronized (stateLock) {
+            operations = pendingOperations;
+            preview = pendingConfirmation;
+        }
+        if (operations == null) {
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND, "There is no pending operation to confirm"));
+        }
+        requireMutationSupport();
+        emit(onProgress, requestId, ProgressStage.EXECUTING, "Applying file operations",
+                0, OptionalLong.empty());
+        List<MutationReceipt.Entry> entries = new ArrayList<>();
+        for (PlannedOperation operation : operations) {
+            entries.add(operation.apply(requestId, mutationService));
+        }
+        synchronized (stateLock) {
+            pendingConfirmation = null;
+            pendingOperations = null;
+        }
+        sessionState.invalidateSearchResult();
+        boolean allFailed = entries.stream().allMatch(entry -> entry.status() == OperationStatus.FAILED);
+        if (allFailed) {
+            StructuredError first = entries.getFirst().error().orElseThrow(
+                    () -> new IllegalStateException("failed entry without error"));
+            throw new ServiceException(first);
+        }
+        return new MutationReceipt(preview.kind(), entries);
+    }
+
+    /** Clears the pending confirmation without any filesystem effect. */
+    private CommandResult cancelPendingMutation() throws ServiceException {
+        PendingConfirmation cancelled;
+        synchronized (stateLock) {
+            if (pendingConfirmation == null) {
+                throw new ServiceException(error(
+                        ErrorCode.INVALID_COMMAND, "There is no pending operation to cancel"));
+            }
+            cancelled = pendingConfirmation;
+            pendingConfirmation = null;
+            pendingOperations = null;
+        }
+        return new CancellationReceipt(
+                "Cancelled: nothing was changed. " + cancelled.originalCommand());
+    }
+
+    /**
+     * Resolves the mutation selection against the current result set and
+     * stores the explicit selection for pronoun follow-ups. NEWEST and
+     * OLDEST use the same deterministic ordering as {@link #executeSelection}.
+     */
+    private FileSearchResult resolveRefinementFiles(
+            CommandPlan.FileMutation.Selection selection, FileSearchResult source) throws ServiceException {
+        if (selection == CommandPlan.FileMutation.Selection.LAST_RESULT
+                || selection == CommandPlan.FileMutation.Selection.ALL_IN_SCOPE) {
+            return source;
+        }
+        List<FileMatch> pool = source.matches();
+        FileMatch chosen = switch (selection) {
+            case NEWEST -> pool.stream()
+                    .max(Comparator.comparing(FileMatch::modifiedAt)
+                            .thenComparing(match -> match.path().toString()))
+                    .orElseThrow();
+            case OLDEST -> pool.stream()
+                    .min(Comparator.comparing(FileMatch::modifiedAt)
+                            .thenComparing(match -> match.path().toString()))
+                    .orElseThrow();
+            case SELECTED -> {
+                SelectedFileResult selected = sessionState.referent();
+                if (selected == null) {
+                    throw new ServiceException(error(
+                            ErrorCode.INVALID_COMMAND,
+                            "No single file is selected; use 'open the newest' or 'move the newest to …' first"));
+                }
+                yield pool.stream()
+                        .filter(match -> match.path().equals(selected.path()))
+                        .findFirst()
+                        .orElseThrow(() -> new ServiceException(error(
+                                ErrorCode.INVALID_COMMAND,
+                                "The selected file is not part of the current result set")));
+            }
+            default -> throw new IllegalStateException("unexpected selection " + selection);
+        };
+        SelectedFileResult selectedResult = new SelectedFileResult(
+                chosen.path(), chosen.fileName(), chosen.sizeBytes(), chosen.modifiedAt());
+        sessionState.setSelection(selectedResult);
+        return new FileSearchResult(List.of(chosen), source.visitedFiles(),
+                source.resultLimitReached(), source.scanLimitReached());
     }
 
     private List<PlannedOperation> planRename(CommandPlan.FileMutation plan) throws ServiceException {
@@ -472,17 +726,16 @@ public final class DefaultCommandGateway implements CommandGateway {
             throw new ServiceException(error(
                     ErrorCode.INVALID_COMMAND, "The previous search found no files to rename"));
         }
-        FileMatch newest = source.matches().stream()
-                .max(Comparator.comparing(FileMatch::modifiedAt)
-                        .thenComparing(match -> match.path().toString()))
-                .orElseThrow();
+        // NEWEST/OLDEST/SELECTED all resolve to one deterministic file (and
+        // record it as the explicit selection for pronoun follow-ups).
+        FileMatch chosen = resolveRefinementFiles(plan.selection(), source).matches().getFirst();
         String newName = plan.name();
-        String oldName = newest.fileName();
+        String oldName = chosen.fileName();
         if (newName.lastIndexOf('.') < 0 && oldName.lastIndexOf('.') > 0) {
             newName = newName + oldName.substring(oldName.lastIndexOf('.'));
         }
-        Path target = newest.path().resolveSibling(newName);
-        PlannedOperation operation = PlannedOperation.rename(newest.path(), target);
+        Path target = chosen.path().resolveSibling(newName);
+        PlannedOperation operation = PlannedOperation.rename(chosen.path(), target);
         confirmSingle(operation, MutationKind.RENAME, RiskLevel.HIGH,
                 "Rename " + oldName + " to " + newName);
         return List.of(operation);
@@ -522,11 +775,16 @@ public final class DefaultCommandGateway implements CommandGateway {
         requireConfirmed(pending);
     }
 
+    /**
+     * Records the preview and, when a handler seam is configured, asks it
+     * immediately (denial aborts with {@code CONFIRMATION_DENIED}). Without
+     * a handler the operation is deferred: the caller stores the pending
+     * preview and the typed "confirm"/"cancel" follow-up decides.
+     */
     private void requireConfirmed(PendingConfirmation pending) throws ServiceException {
+        lastPendingConfirmation = pending;
         if (confirmationHandler == null) {
-            throw new ServiceException(error(
-                    ErrorCode.CONFIRMATION_REQUIRED,
-                    "This operation needs confirmation, but no confirmation handler is configured"));
+            return;
         }
         if (confirmationHandler.confirm(pending) != ConfirmationHandler.Decision.CONFIRMED) {
             throw new ServiceException(error(
@@ -589,7 +847,7 @@ public final class DefaultCommandGateway implements CommandGateway {
         if (!anyAttempt) {
             throw new ServiceException(error(ErrorCode.INVALID_COMMAND, "Nothing left to undo"));
         }
-        sessionState.lastSearchResult = null;
+        sessionState.invalidateSearchResult();
         return new UndoResult(latest.get(), resultRows);
     }
 
@@ -743,16 +1001,66 @@ public final class DefaultCommandGateway implements CommandGateway {
     }
 
     /**
-     * Mutable per-session context. Sprint 2 keeps the minimal state the
-     * plan's context phase needs: the most recent successful search result,
-     * cleared after every mutation or undo so stale selections are never
-     * replayed against a changed filesystem.
+     * Mutable per-session conversational context (sprint 4A): the previous
+     * structured query, the current result set, the explicit selection and
+     * the pending confirmation. Owned by the gateway, guarded by its state
+     * lock, and strictly in-memory per running session — history and undo
+     * persistence are unchanged. Failed commands never touch this state.
      */
     public static final class SessionState {
         private volatile FileSearchResult lastSearchResult;
+        private volatile FileSearchQuery lastSearchQuery;
+        private volatile SelectedFileResult selection;
 
         public Optional<FileSearchResult> lastSearchResult() {
             return Optional.ofNullable(lastSearchResult);
+        }
+
+        Optional<FileSearchQuery> lastSearchQuery() {
+            return Optional.ofNullable(lastSearchQuery);
+        }
+
+        /** The explicit selection, if one is currently valid. */
+        public Optional<SelectedFileResult> selection() {
+            return Optional.ofNullable(selection);
+        }
+
+        void setSearchResult(FileSearchResult result, FileSearchQuery query) {
+            this.lastSearchResult = result;
+            this.lastSearchQuery = query;
+            this.selection = null;
+        }
+
+        void setSelection(SelectedFileResult selected) {
+            this.selection = selected;
+        }
+
+        void clearSelection() {
+            this.selection = null;
+        }
+
+        /** Cache invalidation after a mutation or undo changed the filesystem. */
+        void invalidateSearchResult() {
+            this.lastSearchResult = null;
+            this.lastSearchQuery = null;
+            this.selection = null;
+        }
+
+        /**
+         * The one valid contextual referent for "it" / "the file": the
+         * explicit selection, or the sole file of the current result set.
+         * Returns null when there is no unique referent.
+         */
+        SelectedFileResult referent() {
+            if (selection != null) {
+                return selection;
+            }
+            FileSearchResult current = lastSearchResult;
+            if (current == null || current.matches().size() != 1) {
+                return null;
+            }
+            FileMatch only = current.matches().getFirst();
+            return new SelectedFileResult(only.path(), only.fileName(), only.sizeBytes(), only.modifiedAt());
         }
     }
 

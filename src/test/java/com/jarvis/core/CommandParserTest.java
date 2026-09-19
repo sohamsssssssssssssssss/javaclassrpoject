@@ -124,6 +124,64 @@ class CommandParserTest {
         assertEquals(CommandPlan.FileMutation.Selection.NEWEST, rename.selection());
 
         assertInstanceOf(CommandPlan.Undo.class, parser.parse("undo"));
+        assertInstanceOf(CommandPlan.Undo.class, parser.parse("undo that"),
+                "the conversational undo follow-up parses to the same plan");
+    }
+
+    @Test
+    void refinementSelectorPronounAndPendingGrammar() throws Exception {
+        CommandPlan.RefineSearch size = assertInstanceOf(
+                CommandPlan.RefineSearch.class, parser.parse("only larger than 20 MB"));
+        assertTrue(size.refinement().minimumSizeBytes().isPresent());
+        assertEquals(0, size.refinement().minimumSizeBytes().getAsLong() % CommandParser.BYTES_PER_MB);
+        assertTrue(size.refinement().extensions().isEmpty(),
+                "an absent dimension is inherited from the previous query");
+
+        CommandPlan.RefineSearch date = assertInstanceOf(
+                CommandPlan.RefineSearch.class, parser.parse("only from today"));
+        assertTrue(date.refinement().modifiedAfter().isPresent());
+        assertTrue(date.refinement().minimumSizeBytes().isEmpty());
+
+        CommandPlan.RefineSearch combined = assertInstanceOf(
+                CommandPlan.RefineSearch.class, parser.parse("only smaller than 2 GB from yesterday"));
+        assertTrue(combined.refinement().maximumSizeBytes().isPresent());
+        assertTrue(combined.refinement().modifiedAfter().isPresent());
+        assertTrue(combined.refinement().modifiedBefore().isPresent(),
+                "a day-phrase window carries its end bound so it fully replaces");
+
+        CommandPlan.RefineSearch extension = assertInstanceOf(
+                CommandPlan.RefineSearch.class, parser.parse("only PDFs"));
+        assertEquals(java.util.Set.of("pdf"), extension.refinement().extensions().orElseThrow());
+
+        assertEquals(java.util.Set.of("txt"),
+                assertInstanceOf(CommandPlan.RefineSearch.class, parser.parse("only txt files"))
+                        .refinement().extensions().orElseThrow());
+
+        assertInstanceOf(CommandPlan.SelectFile.class, parser.parse("open the newest"));
+        assertInstanceOf(CommandPlan.SelectFile.class, parser.parse("open the oldest"));
+        assertInstanceOf(CommandPlan.OpenSelected.class, parser.parse("open it"));
+        assertInstanceOf(CommandPlan.OpenSelected.class, parser.parse("open the file"));
+
+        CommandPlan.FileMutation newest = assertInstanceOf(
+                CommandPlan.FileMutation.class, parser.parse("move the newest to Review"));
+        assertEquals(CommandPlan.FileMutation.Selection.NEWEST, newest.selection());
+        CommandPlan.FileMutation oldest = assertInstanceOf(
+                CommandPlan.FileMutation.class, parser.parse("copy the oldest to Backup"));
+        assertEquals(CommandPlan.FileMutation.Selection.OLDEST, oldest.selection());
+        CommandPlan.FileMutation pronoun = assertInstanceOf(
+                CommandPlan.FileMutation.class, parser.parse("move it to Review"));
+        assertEquals(CommandPlan.FileMutation.Selection.SELECTED, pronoun.selection());
+        CommandPlan.FileMutation that = assertInstanceOf(
+                CommandPlan.FileMutation.class, parser.parse("move that file to Review"));
+        assertEquals(CommandPlan.FileMutation.Selection.SELECTED, that.selection());
+
+        assertInstanceOf(CommandPlan.ConfirmPending.class, parser.parse("confirm"));
+        assertInstanceOf(CommandPlan.CancelPending.class, parser.parse("cancel"));
+
+        assertThrows(CommandParseException.class, () -> parser.parse("only"));
+        assertThrows(CommandParseException.class, () -> parser.parse("only bigger nonsense"));
+        assertThrows(CommandParseException.class, () -> parser.parse("confirm please"));
+        assertThrows(CommandParseException.class, () -> parser.parse("move it"));
     }
 
     @Test

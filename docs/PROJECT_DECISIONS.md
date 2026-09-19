@@ -38,6 +38,16 @@ Sprint 4 candidates: live-mic enrollment command, streaming partial transcripts 
 - Tika 2.8.0 (`tika-core` + `tika-parsers-standard-package`) is the only new dependency; shaded-jar service files for Tika Parser/Detector are appended so parser discovery survives packaging.
 - Secondary worktree `jarvis-freebuff-services` (its own Git repository, branch `freebuff/services`) produced an independent draft of the same file/document layer; per the freeze directive it is NOT merged. Its transferable findings are already embodied in this module's ported, tested code: `tika-core` alone ships no parsers (the standard parser package is required), zero-byte inputs are rejected before format detection, and rename destinations resolve against the source's own directory. Any future sync must go through this module's tests, not a blind copy.
 
+## Sprint 4A conversational context decisions (2026-09-19)
+
+- This is **bounded conversational file context**, not general conversational intelligence: the context is typed (previous `FileSearchQuery`, current result set, explicit selection, pending confirmation), in-memory, per-session, and owned by the gateway behind one state lock. No embeddings, no vector store, no transcript memory, no new schema.
+- Refinement composes on the stored structured query — restated dimensions replace, the rest are inherited. The previous user sentence is never re-parsed.
+- Newest/oldest ordering is deterministic: modification time first, highest absolute path string as tie-break — never filesystem iteration order.
+- `it`/`the file` resolve only when exactly one referent exists (explicit selection, else sole result); otherwise the command fails honestly instead of guessing.
+- Confirmation split: with a `ConfirmationHandler` (GUI dialog) the sprint-2 inline preview→decision→execute flow is unchanged; handler-less compositions now defer — the mutation command stores the exact typed preview + pre-resolved operations and returns a `FileMutationPreview` with no disk effect, and the typed `confirm` executes precisely those stored operations. `confirm` never re-parses text and never repeats.
+- `undo that` is the existing `CommandPlan.Undo` — one journal, no second undo system.
+- File opening is the `FileOpener` seam (`/usr/bin/open` on macOS, `xdg-open` on Linux, visible refusal elsewhere), always on a scope-checked, existence-checked path resolved by the gateway.
+
 ## Verified dependency basis
 
 - OpenJFX documents Maven platform-native resolution and JavaFX 21 requires macOS 11+/GTK 3. JavaFX 21.0.10 artifacts include macOS ARM64 natives.

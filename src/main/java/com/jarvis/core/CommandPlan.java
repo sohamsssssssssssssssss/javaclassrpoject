@@ -56,7 +56,11 @@ public sealed interface CommandPlan {
         public enum Selection {
             ALL_IN_SCOPE,
             LAST_RESULT,
-            NEWEST
+            NEWEST,
+            /** The deterministically chosen least-recently-modified file. */
+            OLDEST,
+            /** The current explicit session selection ("it" / "the file"). */
+            SELECTED
         }
     }
 
@@ -85,5 +89,50 @@ public sealed interface CommandPlan {
         public ContentSearch {
             Objects.requireNonNull(query, "query");
         }
+    }
+
+    /**
+     * Refines the most recent successful search of this session by replacing
+     * only the dimensions carried in {@code refinement} (restated extensions
+     * and/or resolved size bounds and/or date window); all other constraints
+     * of the previous structured query are retained. Structured state, never
+     * re-parsed prose.
+     */
+    record RefineSearch(FileSearchQuery.Refinement refinement) implements CommandPlan {
+        public RefineSearch {
+            Objects.requireNonNull(refinement, "refinement");
+        }
+    }
+
+    /**
+     * Contextual selection from the current session result set.
+     * {@code NEWEST} / {@code OLDEST} resolve deterministically by last
+     * modified time with an absolute-path tie-break.
+     */
+    record SelectFile(Target target) implements CommandPlan {
+        public enum Target {
+            NEWEST,
+            OLDEST
+        }
+    }
+
+    /**
+     * Opens the single contextual file referent: the current explicit
+     * selection when present, otherwise the sole file of the current result
+     * set. Never a guess — ambiguous or missing referents are rejections.
+     */
+    record OpenSelected() implements CommandPlan {
+    }
+
+    /**
+     * Executes the exact pending confirmed operation stored for this
+     * session — the typed operations previewed when the mutation command
+     * ran. No text is re-parsed and no paths are re-resolved.
+     */
+    record ConfirmPending() implements CommandPlan {
+    }
+
+    /** Cancels the pending confirmation without any filesystem effect. */
+    record CancelPending() implements CommandPlan {
     }
 }
