@@ -42,6 +42,8 @@ public final class MavenDiagnosticsService implements ProjectDiagnosticsService 
 
     /** Bounded number of report files inspected. */
     public static final int MAX_REPORT_FILES = 50;
+    /** Reports larger than this are skipped with an honest UNKNOWN diagnostic. */
+    public static final long MAX_REPORT_FILE_BYTES = 5_000_000;
 
     // Conservative Maven output patterns. Each captures the smallest
     // information that is unambiguous; everything else stays UNKNOWN.
@@ -78,10 +80,13 @@ public final class MavenDiagnosticsService implements ProjectDiagnosticsService 
         // 1) Structured Surefire evidence, when a test run happened.
         if (lastOperation.operation() == ProjectOperation.TEST
                 || lastOperation.operation() == ProjectOperation.BUILD) {
-            List<Diagnostic> fromReports = readSurefireReports(project.root());
-            int reportLimit = DiagnosticsReport.MAX_DIAGNOSTICS;
-            truncated = fromReports.size() > reportLimit;
-            diagnostics.addAll(fromReports.subList(0, Math.min(fromReports.size(), reportLimit)));
+        List<Diagnostic> fromReports = readSurefireReports(project.root());
+        int reportLimit = DiagnosticsReport.MAX_DIAGNOSTICS;
+        // ">=" (not ">") on purpose: collection stops as soon as the limit is
+        // reached, so reaching it exactly may still mean unread evidence —
+        // the truncation flag must stay truthful in that case.
+        truncated = fromReports.size() >= reportLimit;
+        diagnostics.addAll(fromReports.subList(0, Math.min(fromReports.size(), reportLimit)));
         }
 
         // 2) Conservative output patterns when reports said nothing.
@@ -121,6 +126,22 @@ public final class MavenDiagnosticsService implements ProjectDiagnosticsService 
         for (Path report : reportFiles) {
             if (diagnostics.size() >= DiagnosticsReport.MAX_DIAGNOSTICS) {
                 break;
+            }
+            try {
+                if (Files.size(report) > MAX_REPORT_FILE_BYTES) {
+                    // An oversized report is skipped, not parsed blindly.
+                    diagnostics.add(new Diagnostic(Diagnostic.Kind.UNKNOWN,
+                            Diagnostic.Source.SUREFIRE_REPORT,
+                            Optional.of(fileName(report)), Optional.empty(),
+                            Optional.of(relativize(report, projectRoot)),
+                            Optional.of("Surefire report skipped: it exceeds "
+                                    + MAX_REPORT_FILE_BYTES + " bytes."),
+                            Optional.empty()));
+                    continue;
+                }
+            } catch (IOException ignored) {
+                // Unreadable size falls through to the parse attempt, which
+                // reports its own honest diagnostic on failure.
             }
             diagnostics.addAll(parseSurefireXml(report, projectRoot));
         }
