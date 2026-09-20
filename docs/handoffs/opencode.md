@@ -1,4 +1,4 @@
-# OpenCode Handoff - JARVIS Sprint 1 UI
+# OpenCode Handoff - JADE Sprint 1 UI
 
 ## Files Changed
 
@@ -13,7 +13,7 @@
 ## Public Integration Entry Points
 
 ### View Factory
-The `CommandUI` class is the view entry point for Codex's application bootstrap. It is instantiated by the application composition root in `com.jarvis.app.JarvisApplication` (Codex-owned) through the `CommandGateway` dependency.
+The `CommandUI` class is the view entry point for Codex's application bootstrap. It is instantiated by the application composition root in `com.jade.app.JadeApplication` (Codex-owned) through the `CommandGateway` dependency.
 
 ### Constructor Signature
 ```java

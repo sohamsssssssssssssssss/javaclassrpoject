@@ -60,7 +60,7 @@ Each also offers an overload constructor for test injection (launcher/resolver, 
 - Note: the frozen `SystemSnapshot` record has no storage/battery fields; storage and battery metrics are therefore not exposed this sprint (record a contract extension request if wanted next sprint).
 
 ### HistoryRepository (`SqliteHistoryRepository`)
-- Xerial SQLite JDBC; database file at the caller-supplied path (composition creates it under the writable application-data location, e.g. `user.home/Application Support/JARVIS` or `%APPDATA%/JARVIS`).
+- Xerial SQLite JDBC; database file at the caller-supplied path (composition creates it under the writable application-data location, e.g. `user.home/Application Support/JADE` or `%APPDATA%/JADE`).
 - Versioned migrations from classpath `/db/*.sql` gated on `PRAGMA user_version`, each applied in one transaction; currently migration 001 only. Pragmas: `busy_timeout=5000`, `journal_mode=WAL`, `synchronous=NORMAL`.
 - All statements prepared; writes are single transactions; reads bounded `LIMIT ?` and ordered `completed_at DESC, request_id DESC` (valid limits 1..50, else `INVALID_COMMAND`). Enum names and `Instant.toString()` stored as TEXT.
 - `close()` is idempotent and final: use-after-close fails with `DATABASE_FAILURE` instead of silently reopening. Duplicate `request_id` (PK violation) → `DATABASE_FAILURE`. Transactions are database-only — they never roll back OS actions.

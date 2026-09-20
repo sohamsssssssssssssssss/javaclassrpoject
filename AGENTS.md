@@ -1,4 +1,4 @@
-# JARVIS Working Agreement
+# JADE Working Agreement
 
 ## Project decisions
 
@@ -11,9 +11,9 @@
 
 ## Exclusive ownership
 
-- **Codex/Soham:** `pom.xml`, `com.jarvis.api`, `com.jarvis.app`, `com.jarvis.core`, central docs and integration.
-- **OpenCode:** `com.jarvis.ui`, `src/main/resources/ui`, matching UI tests, `docs/handoffs/opencode.md`.
-- **Freebuff:** `com.jarvis.services`, `src/main/resources/db`, matching service tests, `docs/handoffs/freebuff.md`.
+- **Codex/Soham:** `pom.xml`, `com.jade.api`, `com.jade.app`, `com.jade.core`, central docs and integration.
+- **OpenCode:** `com.jade.ui`, `src/main/resources/ui`, matching UI tests, `docs/handoffs/opencode.md`.
+- **Freebuff:** `com.jade.services`, `src/main/resources/db`, matching service tests, `docs/handoffs/freebuff.md`.
 - Workers request API/build/central-doc changes in their handoff; they do not edit another owner's files.
 - `docs/handoffs/codex.md` belongs to Codex in Stage B.
 

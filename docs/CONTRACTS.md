@@ -1,10 +1,10 @@
 # Frozen Sprint 1 Contracts
 
-`com.jarvis.api` is JavaFX-free. Constructors receive interfaces; no service locator, global singleton or reflection-based DI is allowed.
+`com.jade.api` is JavaFX-free. Constructors receive interfaces; no service locator, global singleton or reflection-based DI is allowed.
 
 ## Composition
 
-Final integration creates these worker implementations, then injects them into `com.jarvis.core.DefaultCommandGateway`:
+Final integration creates these worker implementations, then injects them into `com.jade.core.DefaultCommandGateway`:
 
 ```java
 new DesktopAppService(List<ConfiguredApp> apps)
@@ -15,7 +15,7 @@ new DefaultCommandGateway(appService, fileSearchService, systemInfoService,
     historyRepository, workerExecutor)
 ```
 
-Implementation classes live under `com.jarvis.services`; `DefaultCommandGateway` lives under `com.jarvis.core`. The executor is bounded and owned/closed by application composition. Service constructors validate configuration and do no blocking work.
+Implementation classes live under `com.jade.services`; `DefaultCommandGateway` lives under `com.jade.core`. The executor is bounded and owned/closed by application composition. Service constructors validate configuration and do no blocking work.
 
 `DesktopAppService` maps logical IDs to argument lists passed directly to `ProcessBuilder`; it never accepts or invokes a shell string. `FileSystemFileSearchService` uses only its constructor roots, returns at most 50 matches, stops after visiting 10,000 regular files, does not follow symbolic links, and reports which bound stopped the scan. Permission/I/O failures produce a structured failure rather than fabricated success.
 

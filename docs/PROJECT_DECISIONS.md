@@ -6,13 +6,13 @@
 - Java 21 is the compilation target. JavaFX 21.0.10 stays on the Java 21 LTS line.
 - SQLite JDBC 3.53.4.0 bundles native SQLite libraries; OSHI 6.8.3 supplies metrics. These dependencies are not implemented in Java throughout.
 - JavaFX, JDBC, OSHI and JUnit are the only dependencies. No DI framework: constructors receive interfaces directly.
-- Search roots are explicit: select a folder in the first-run JavaFX setup or set `jarvis.search.roots`/`JARVIS_SEARCH_ROOTS` to a platform path-separator-delimited list. No developer-specific path is embedded.
-- `jarvis.app.alias`/`JARVIS_APP_ALIAS` optionally adds one normalized alias for the configured Calculator app; it never supplies an executable or shell text.
-- History defaults to the current user's platform application-data directory and can be relocated with `jarvis.data.dir`/`JARVIS_DATA_DIR`.
+- Search roots are explicit: select a folder in the first-run JavaFX setup or set `jade.search.roots`/`JADE_SEARCH_ROOTS` to a platform path-separator-delimited list. No developer-specific path is embedded.
+- `jade.app.alias`/`JADE_APP_ALIAS` optionally adds one normalized alias for the configured Calculator app; it never supplies an executable or shell text.
+- History defaults to the current user's platform application-data directory and can be relocated with `jade.data.dir`/`JADE_DATA_DIR`.
 - Limits are fixed for sprint 1: 50 returned matches and 10,000 visited files per request. One MB is 1,048,576 bytes.
 - Filename extension matching is Unicode-preserving and ASCII case-insensitive on the final filename suffix. Original path/name case is returned unchanged.
 - Timestamps use `Instant` and persist as ISO-8601 UTC text.
-- Sprint 2 file-mutation safety: sources and targets must resolve inside configured roots (no symlink following, no `..` traversal), targets are never overwritten (`TARGET_EXISTS`), directories are never moved/copied into their own descendants, and JARVIS has no delete operation at all.
+- Sprint 2 file-mutation safety: sources and targets must resolve inside configured roots (no symlink following, no `..` traversal), targets are never overwritten (`TARGET_EXISTS`), directories are never moved/copied into their own descendants, and JADE has no delete operation at all.
 - Risk levels per master plan §28: create/copy MEDIUM, move/rename HIGH, delete CRITICAL (unimplemented). Every mutation command asks once for its whole planned batch through the ConfirmationHandler seam; denial is a structured REJECTED outcome with no filesystem effect. With no handler configured, mutations are rejected CONFIRMATION_REQUIRED.
 - Undo journalling covers genuinely reversible operations only: moves and renames (migration 002, per-row status so repeat undo is idempotent). Copies and folder creation are deliberately not undoable and are reported as such. Undo moves never overwrite an occupied original location.
 - Cached search results are cleared after every mutation or undo so stale selections can never be replayed against a changed filesystem.
@@ -20,8 +20,8 @@
 - Audio feasibility (capture, offline STT/TTS candidates, device/permission failures and sample testing) is the immediate next sprint.
 - Sprint 3 voice: Vosk is pinned to **0.3.38** — the 0.3.45 binding/native pair is mismatched on macOS (`vosk_recognizer_set_grm` missing from the bundled dylib). The darwin dylib is universal (x86_64+arm64), so 0.3.38 loads natively on Apple Silicon.
 - Voice convergence rule: a spoken transcript enters the EXISTING gateway as a plain `CommandRequest`; voice never gets a second parser or a privileged path.
-- Wake phrase "hello jarvis" is detected on the STT transcript (greeting word + wake word, known mishearings tolerated); no neural wake-word model. Speaker identity (Soham/Ved/Unknown, x-vector cosine ≥ 0.60 threshold) personalizes greetings only and never grants permissions.
-- Vosk models are user-installed under `jarvis.audio.model.dir` / `jarvis.audio.spk.model.dir` and never committed. Without them, JARVIS runs normally with voice visibly unavailable.
+- Wake phrase "hello jade" is detected on the STT transcript (greeting word + wake word, known mishearings tolerated); no neural wake-word model. Speaker identity (Soham/Ved/Unknown, x-vector cosine ≥ 0.60 threshold) personalizes greetings only and never grants permissions.
+- Vosk models are user-installed under `jade.audio.model.dir` / `jade.audio.spk.model.dir` and never committed. Without them, JADE runs normally with voice visibly unavailable.
 - TTS is the platform adapter seam (`SpeechSynthesisService`); the shipped implementation is macOS `/usr/bin/say` with an explicit, unit-tested argument list. Other platforms fail visibly.
 - Sprint 1 distribution is a host-specific `jpackage` app image. The verified artifact is macOS ARM64; Windows/Linux packages must be built and checked on those target platforms.
 
@@ -31,7 +31,7 @@ Sprint 4 candidates: live-mic enrollment command, streaming partial transcripts 
 
 ## Sprint 4 file intelligence decisions (2026-09-19)
 
-- The verified file/document service layer is ported into this module (`com.jarvis.services.files`), following the existing services-porting pattern; it stays the single source of extraction/search behavior.
+- The verified file/document service layer is ported into this module (`com.jade.services.files`), following the existing services-porting pattern; it stays the single source of extraction/search behavior.
 - Mutations continue to flow exclusively through `ScopedFileMutationService` + confirmation; the ported `FileService` mutation methods are not routed, so no command can bypass the tested safety/undo layer.
 - `list files` and `file info` reuse `FileSearchResult`; `list files` seeds the session context so selection commands compose. `file info` resolves one scope file by case-insensitive name and rejects missing/ambiguous names.
 - Content search (`find <ext> files containing "text"`) runs over the last search result of the session through the injected `ContentSearchService`; the 100-document service limit is preserved, and per-document extraction failures are surfaced (`extractionFailed` + structured reason) instead of reading as zero matches.

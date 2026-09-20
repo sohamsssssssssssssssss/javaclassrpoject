@@ -89,9 +89,9 @@ Silicon), MacBook Pro internal microphone.
    `LineUnavailableException`/`SecurityException` are surfaced as structured
    `AudioException`s either way.
 3. **PASS.** Offline transcription (Wi-Fi-independent, no network at runtime) of
-   pre-recorded WAVs: "open calculator", "find pdf files", "system status" and
-   "hello jarvis" ×6 transcribed **exactly**; decode + recognize ≤ ~200 ms per
-   short utterance.
+    pre-recorded WAVs: "open calculator", "find pdf files", "system status" and
+    "hello jade" ×6 transcribed **exactly**; decode + recognize ≤ ~200 ms per
+    short utterance.
 4. **PASS.** `/usr/bin/say -v Samantha -r 175 "Good morning, Master Soham. How may I
    assist you?"` exits 0 with audible speech; adapter argument list is explicit,
    deterministic and unit-tested (`MacSaySpeechSynthesisServiceTest`).
@@ -102,21 +102,21 @@ Silicon), MacBook Pro internal microphone.
    ≤ 0.36. **Chosen threshold: 0.60.** Note: the enrollment samples are macOS `say`
    voices, not the real owners — the mechanism is validated, personal thresholds may
    need re-tuning with real voices.
-6. **PASS.** "hello jarvis" appeared as the exact transcript in every wake utterance
-   tested; `TranscriptWakePhraseDetector` matches on the transcribed words (requires a
-   greeting word + the wake word, tolerating "jervis"/"service" mishearings).
+6. **PASS.** "hello jade" appeared as the exact transcript in every wake utterance
+    tested; `TranscriptWakePhraseDetector` matches on the transcribed words (requires a
+    greeting word + the wake word, tolerating "jervis"/"service" mishearings).
 
 ## 7. What is real vs. what is required
 
 - **Real and offline:** mic capture, STT, speaker x-vector extraction, matching, TTS.
   No network is used at runtime.
 - **Requires an installed model** (never committed to Git): unpack
-  `vosk-model-small-en-us-0.15` under `jarvis.audio.model.dir` / `JARVIS_AUDIO_MODEL_DIR`
-  and optionally `vosk-model-spk-0.4` under `jarvis.audio.spk.model.dir` /
-  `JARVIS_AUDIO_SPK_MODEL_DIR`. Without the STT model the app runs normally and the
+  `vosk-model-small-en-us-0.15` under `jade.audio.model.dir` / `JADE_AUDIO_MODEL_DIR`
+  and optionally `vosk-model-spk-0.4` under `jade.audio.spk.model.dir` /
+  `JADE_AUDIO_SPK_MODEL_DIR`. Without the STT model the app runs normally and the
   voice panel reads "Voice unavailable (STT model not installed)".
 - **Platform-specific:** TTS is macOS `/usr/bin/say` behind `SpeechSynthesisService`;
-  other platforms fail visibly. Speaker enrollment profiles persist under the JARVIS
+  other platforms fail visibly. Speaker enrollment profiles persist under the JADE
   data directory (`speakers/SOHAM.spk`, `speakers/VED.spk`).
 - **Incomplete / limitations:** no live-mic enrollment command yet (profiles are created
   by tooling using the service API); no streaming partial-transcript display in the UI;

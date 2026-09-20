@@ -6,9 +6,9 @@ Keywords and aliases are matched with `Locale.ROOT` case folding; quoted argumen
 
 Voice is available only when a Vosk STT model is installed (see docs/AUDIO_FEASIBILITY.md). Commands are **spoken** using exactly the same grammar as the table below — there are no voice-only commands and no voice-specific parsing.
 
-1. Say **"hello Jarvis"** — JARVIS greets you ("Good morning, Master Soham…" when recognized; otherwise it introduces itself and asks your name).
+1. Say **"hello Jade"** — JADE greets you ("Good morning, Master Soham…" when recognized; otherwise it introduces itself and asks your name).
 2. After the greeting, speak one command, e.g. **"system status"** or **"open calculator"**.
-3. JARVIS executes it through the same pipeline as typed input and speaks the summary (SUCCEEDED/REJECTED/FAILED).
+3. JADE executes it through the same pipeline as typed input and speaks the summary (SUCCEEDED/REJECTED/FAILED).
 
 The voice strip shows the current state (IDLE, LISTENING, PROCESSING, EXECUTING, SPEAKING, ERROR), the recognized transcript and the identified speaker. Speaker identification (Soham/Ved/Unknown) personalizes greetings only; it never grants permissions. Each wake session handles exactly one command.
 
