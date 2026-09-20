@@ -23,6 +23,10 @@ import com.jade.api.FileSearchService;
 import com.jade.api.ProjectContext;
 import com.jade.api.ProjectInspectionResult;
 import com.jade.api.ProjectInspectionService;
+import com.jade.api.ProjectDiagnosticsService;
+import com.jade.api.DiagnosticsReport;
+import com.jade.api.Diagnostic;
+import com.jade.api.DiagnosticCount;
 import com.jade.api.ProjectOperation;
 import com.jade.api.ProjectOperationResult;
 import com.jade.api.ProjectOperationStatus;
@@ -58,6 +62,7 @@ import com.jade.services.files.ExtractionStatus;
 import com.jade.services.files.FileService;
 import com.jade.services.files.FileSystemFileService;
 import com.jade.services.project.FileSystemProjectService;
+import com.jade.services.project.MavenDiagnosticsService;
 import com.jade.services.project.MavenProjectInspectionService;
 import com.jade.services.project.MavenProjectProcessRunner;
 
@@ -117,6 +122,7 @@ public final class DefaultCommandGateway implements CommandGateway {
     private final ProjectService projectService;
     private final ProjectProcessRunner projectProcessRunner;
     private final ProjectInspectionService projectInspectionService;
+    private final ProjectDiagnosticsService projectDiagnosticsService;
     private final SessionState sessionState = new SessionState();
     /** Guard for the bounded, ordered context/confirmation state machine. */
     private final Object stateLock = new Object();
@@ -210,6 +216,7 @@ public final class DefaultCommandGateway implements CommandGateway {
         this.projectService = java.util.Objects.requireNonNull(projectService, "projectService");
         this.projectProcessRunner = java.util.Objects.requireNonNull(projectProcessRunner, "projectProcessRunner");
         this.projectInspectionService = new MavenProjectInspectionService();
+        this.projectDiagnosticsService = new MavenDiagnosticsService();
         if (mutationService != null && scopeRoots.isEmpty()) {
             throw new IllegalArgumentException("mutation support requires at least one scope root");
         }
@@ -371,6 +378,16 @@ public final class DefaultCommandGateway implements CommandGateway {
         if (plan instanceof CommandPlan.ProjectTodos) {
             ProjectInspectionResult inspection = projectInspectionService.inspect(requireActiveProject());
             return new TodoFindings(inspection.todoFindings(), inspection.todosTruncated());
+        }
+        if (plan instanceof CommandPlan.ProjectDiagnostics) {
+            return analyzeProjectDiagnostics();
+        }
+        if (plan instanceof CommandPlan.ProjectDiagnosticsCount) {
+            DiagnosticsReport report = (DiagnosticsReport) analyzeProjectDiagnostics();
+            return new DiagnosticCount(report.diagnostics().stream()
+                    .filter(d -> d.kind() == Diagnostic.Kind.TEST_FAILURE
+                            || d.kind() == Diagnostic.Kind.TEST_ERROR)
+                    .count(), report.lastStatus());
         }
         if (plan instanceof CommandPlan.FileMutation mutation) {
             return executeMutation(mutation, cancellation, requestId, onProgress);
@@ -814,6 +831,22 @@ public final class DefaultCommandGateway implements CommandGateway {
         return last == null ? ProjectOutcomeReport.none() : ProjectOutcomeReport.of(last);
     }
 
+    /**
+     * Structured diagnostics for the most recent project operation of this
+     * session. No operation yet is an honest rejection; a succeeded run is
+     * reported as zero detected failures rather than analysed for problems.
+     */
+    private CommandResult analyzeProjectDiagnostics() throws ServiceException {
+        ProjectContext project = requireActiveProject();
+        ProjectOperationResult last = sessionState.lastProjectOperation().orElse(null);
+        if (last == null) {
+            throw new ServiceException(error(ErrorCode.INVALID_COMMAND,
+                    "No project operation has run in this session yet; "
+                            + "use 'run the tests' or 'build it' first"));
+        }
+        return projectDiagnosticsService.analyze(project, last);
+    }
+
     /** Clears the pending confirmation without any filesystem effect. */
     private CommandResult cancelPendingMutation() throws ServiceException {
         PendingConfirmation cancelled;
@@ -1129,6 +1162,19 @@ public final class DefaultCommandGateway implements CommandGateway {
             return todos.findings().isEmpty() ? "No TODO/FIXME markers found"
                     : "TODO/FIXME markers found: " + todos.findings().size()
                             + (todos.truncated() ? " (list truncated)" : "");
+        }
+        if (result instanceof DiagnosticsReport report) {
+            if (report.diagnostics().isEmpty()) {
+                return report.lastStatus() == ProjectOperationStatus.SUCCEEDED
+                        ? "No failures detected in the last project operation"
+                        : "No specific failures identified (last operation: " + report.lastStatus() + ")";
+            }
+            return report.diagnostics().size() + " diagnostic(s) detected in the last project operation"
+                    + (report.truncated() ? " (list truncated)" : "");
+        }
+        if (result instanceof DiagnosticCount count) {
+            return count.failedTestCount() + " failing test(s) detected; last operation "
+                    + count.lastStatus();
         }
         return "Command history loaded";
     }

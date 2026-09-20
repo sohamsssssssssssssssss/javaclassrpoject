@@ -176,6 +176,13 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             case DependencyList dependencies -> showDependencies(dependencies);
             case MainClassCandidates mains -> showMainCandidates(mains);
             case TodoFindings todos -> showTodoFindings(todos);
+            case DiagnosticsReport report -> showDiagnostics(report);
+            case DiagnosticCount count -> showMessage(
+                    count.failedTestCount() == 0
+                            ? "No failing tests detected — last operation: " + count.lastStatus()
+                            : count.failedTestCount() + " failing test(s) detected — last operation: "
+                                    + count.lastStatus(),
+                    count.failedTestCount() == 0 ? "text-accent" : "label-warning");
         }
     }
 
@@ -339,6 +346,32 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         if (todos.truncated()) {
             showMessage("(findings truncated at "
                     + ProjectInspectionService.MAX_TODO_FINDINGS + " entries)", "label-warning");
+        }
+    }
+
+    /** Renders bounded structured diagnostics with per-diagnostic detail. */
+    private void showDiagnostics(DiagnosticsReport report) {
+        if (report.diagnostics().isEmpty()) {
+            if (report.lastStatus() == com.jade.api.ProjectOperationStatus.SUCCEEDED) {
+                showMessage("No failures detected — the last project operation succeeded.",
+                        "text-accent");
+            } else {
+                showMessage("No specific failures could be identified from the last run ("
+                        + report.lastStatus() + ").", "label-subtle");
+            }
+            return;
+        }
+        for (Diagnostic diagnostic : report.diagnostics()) {
+            String where = diagnostic.location().map(location -> " @ " + location).orElse("");
+            String what = diagnostic.testClass().map(testClass -> testClass
+                    + diagnostic.testMethod().map(method -> "." + method).orElse("")).orElse("");
+            showMessage("✗ [" + diagnostic.kind() + "] " + what + where, "label-warning");
+            diagnostic.message().ifPresent(message -> showMessage("    " + message, "text-primary"));
+            diagnostic.detail().ifPresent(detail -> showMessage("    " + detail, "label-subtle"));
+        }
+        if (report.truncated()) {
+            showMessage("(diagnostics truncated at " + DiagnosticsReport.MAX_DIAGNOSTICS
+                    + " entries)", "label-warning");
         }
     }
 

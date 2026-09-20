@@ -174,6 +174,10 @@ public final class CommandParser {
                 if (tokens.size() == 3 && keyword(tokens.get(1)).equals("is")) {
                     return new CommandPlan.FileInfo(tokens.get(2).value().strip());
                 }
+                CommandPlan diagnosticsQuestion = parseProjectDiagnosticsQuestion(tokens);
+                if (diagnosticsQuestion != null) {
+                    return diagnosticsQuestion;
+                }
                 CommandPlan projectQuestion = parseProjectQuestion(tokens);
                 if (projectQuestion != null) {
                     return projectQuestion;
@@ -183,6 +187,10 @@ public final class CommandParser {
                         + "or 'what dependencies does it use'");
             }
             default -> {
+                CommandPlan diagnosticsQuestion = parseProjectDiagnosticsQuestion(tokens);
+                if (diagnosticsQuestion != null) {
+                    return diagnosticsQuestion;
+                }
                 CommandPlan projectQuestion = parseProjectPhrase(tokens);
                 if (projectQuestion != null) {
                     return projectQuestion;
@@ -204,6 +212,14 @@ public final class CommandParser {
      */
     private CommandPlan parseProjectPhrase(List<CommandTokenizer.Token> tokens) {
         List<String> words = phraseWords(tokens);
+        // "show me the errors" / "show the errors" / "show me the failures"
+        if ((words.size() == 4 && words.get(0).equals("show") && words.get(1).equals("me")
+                && words.get(2).equals("the") && (words.get(3).equals("errors")
+                        || words.get(3).equals("failures")))
+                || (words.size() == 3 && words.get(0).equals("show") && words.get(1).equals("the")
+                        && (words.get(2).equals("errors") || words.get(2).equals("failures")))) {
+            return new CommandPlan.ProjectDiagnostics();
+        }
         // "show me the project structure" / "show the project structure" / "show project structure"
         if ((words.size() == 5 && words.get(0).equals("show") && words.get(1).equals("me")
                 && words.get(2).equals("the") && words.get(3).equals("project")
@@ -263,6 +279,41 @@ public final class CommandParser {
      * Nothing here is a generic question answerer — each phrase maps to
      * exactly one typed inspection plan.
      */
+    /**
+     * Bounded diagnostics question grammar under "what"/"how": "what
+     * failed", "what broke", "what went wrong", "what errors were there",
+     * "how many tests failed", "how many tests are failing". Each maps to
+     * exactly one typed diagnostics plan; anything else falls through.
+     */
+    private CommandPlan parseProjectDiagnosticsQuestion(List<CommandTokenizer.Token> tokens) {
+        List<String> words = phraseWords(tokens);
+        if (words.size() == 2 && words.get(0).equals("what") && words.get(1).equals("failed")) {
+            return new CommandPlan.ProjectDiagnostics();
+        }
+        if (words.size() == 3 && words.get(0).equals("what") && words.get(1).equals("broke")
+                && words.get(2).equals("now")) {
+            return new CommandPlan.ProjectDiagnostics();
+        }
+        if (words.size() == 3 && words.get(0).equals("what") && words.get(1).equals("went")
+                && words.get(2).equals("wrong")) {
+            return new CommandPlan.ProjectDiagnostics();
+        }
+        if (words.size() == 4 && words.get(0).equals("what") && words.get(1).equals("errors")
+                && words.get(2).equals("were") && words.get(3).equals("there")) {
+            return new CommandPlan.ProjectDiagnostics();
+        }
+        if (words.size() == 4 && words.get(0).equals("how") && words.get(1).equals("many")
+                && words.get(2).equals("tests") && words.get(3).equals("failed")) {
+            return new CommandPlan.ProjectDiagnosticsCount();
+        }
+        if (words.size() == 5 && words.get(0).equals("how") && words.get(1).equals("many")
+                && words.get(2).equals("tests") && words.get(3).equals("are")
+                && words.get(4).equals("failing")) {
+            return new CommandPlan.ProjectDiagnosticsCount();
+        }
+        return null;
+    }
+
     /** Lower-cased keywords with one trailing question mark stripped. */
     private static List<String> phraseWords(List<CommandTokenizer.Token> tokens) {
         return tokens.stream().map(CommandParser::keyword)

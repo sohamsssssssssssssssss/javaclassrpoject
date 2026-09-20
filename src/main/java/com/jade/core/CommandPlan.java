@@ -191,4 +191,15 @@ public sealed interface CommandPlan {
     /** Bounded TODO/FIXME findings of the active project. */
     record ProjectTodos() implements CommandPlan {
     }
+
+    /**
+     * Structured diagnostics of the most recent project operation of this
+     * session: what failed, with bounded evidence. Not a code-fixing flow.
+     */
+    record ProjectDiagnostics() implements CommandPlan {
+    }
+
+    /** Failure count of the most recent project operation, as detected. */
+    record ProjectDiagnosticsCount() implements CommandPlan {
+    }
 }

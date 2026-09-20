@@ -20,5 +20,7 @@ public sealed interface CommandResult permits
         ProjectTree,
         DependencyList,
         TodoFindings,
-        MainClassCandidates {
+        MainClassCandidates,
+        DiagnosticsReport,
+        DiagnosticCount {
 }
