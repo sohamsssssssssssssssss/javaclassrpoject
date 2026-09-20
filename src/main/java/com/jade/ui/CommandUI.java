@@ -183,6 +183,7 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
                             : count.failedTestCount() + " failing test(s) detected — last operation: "
                                     + count.lastStatus(),
                     count.failedTestCount() == 0 ? "text-accent" : "label-warning");
+            case com.jade.api.ExecutionResult execution -> showExecutionTrace(execution);
         }
     }
 
@@ -372,6 +373,30 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         if (report.truncated()) {
             showMessage("(diagnostics truncated at " + DiagnosticsReport.MAX_DIAGNOSTICS
                     + " entries)", "label-warning");
+        }
+    }
+
+    /** Renders the bounded typed trace of a multi-step plan execution. */
+    private void showExecutionTrace(com.jade.api.ExecutionResult execution) {
+        showMessage("Plan executed — " + execution.trace().size() + " step(s)", "text-accent");
+        for (com.jade.api.ExecutionStepResult step : execution.trace()) {
+            String icon = switch (step.status()) {
+                case SUCCEEDED -> "✓";
+                case FAILED_RESULT -> "✗";
+                case ERROR -> "⚠";
+                case SKIPPED -> "–";
+            };
+            showMessage(icon + " " + step.step() + " — " + step.status() + " ("
+                    + step.durationMillis() + " ms)", "text-primary");
+            step.result().ifPresent(result -> {
+                if (result instanceof ProjectOperationResult operation) {
+                    showMessage("    " + operation.operation() + " on " + operation.projectName()
+                            + " — " + operation.status(), "label-subtle");
+                } else if (result instanceof DiagnosticsReport report) {
+                    showMessage("    " + report.diagnostics().size() + " diagnostic(s) detected",
+                            "label-subtle");
+                }
+            });
         }
     }
 

@@ -123,6 +123,7 @@ public final class DefaultCommandGateway implements CommandGateway {
     private final ProjectProcessRunner projectProcessRunner;
     private final ProjectInspectionService projectInspectionService;
     private final ProjectDiagnosticsService projectDiagnosticsService;
+    private final com.jade.api.CommandPlanner commandPlanner;
     private final SessionState sessionState = new SessionState();
     /** Guard for the bounded, ordered context/confirmation state machine. */
     private final Object stateLock = new Object();
@@ -217,6 +218,7 @@ public final class DefaultCommandGateway implements CommandGateway {
         this.projectProcessRunner = java.util.Objects.requireNonNull(projectProcessRunner, "projectProcessRunner");
         this.projectInspectionService = new MavenProjectInspectionService();
         this.projectDiagnosticsService = new MavenDiagnosticsService();
+        this.commandPlanner = new DefaultCommandPlanner();
         if (mutationService != null && scopeRoots.isEmpty()) {
             throw new IllegalArgumentException("mutation support requires at least one scope root");
         }
@@ -290,13 +292,27 @@ public final class DefaultCommandGateway implements CommandGateway {
         try {
             cancelled(submission);
             emit(onProgress, request.id(), ProgressStage.PARSING, "Parsing command", 0, OptionalLong.empty());
-            CommandPlan plan = parser.parse(request.originalText());
-            cancelled(submission);
-            emit(onProgress, request.id(), ProgressStage.PLANNING, "Planning command", 0, OptionalLong.empty());
-            CommandResult result = executePlan(plan, submission, request.id(), onProgress);
-            cancelled(submission);
-            outcome = terminal(request.id(), CommandStatus.SUCCEEDED, summary(result),
-                    Optional.of(result), Optional.empty(), started);
+            CommandPlan plan;
+            java.util.Optional<com.jade.api.ExecutionPlan> multiStep =
+                    commandPlanner.plan(request.originalText());
+            if (multiStep.isPresent()) {
+                // A recognised compound request executes as one typed plan;
+                // single-command parsing is skipped entirely for it.
+                emit(onProgress, request.id(), ProgressStage.PLANNING, "Planning command", 0, OptionalLong.empty());
+                CommandResult result = executePlanSteps(
+                        multiStep.get(), submission, request.id(), onProgress);
+                cancelled(submission);
+                outcome = terminal(request.id(), CommandStatus.SUCCEEDED, summary(result),
+                        Optional.of(result), Optional.empty(), started);
+            } else {
+                plan = parser.parse(request.originalText());
+                cancelled(submission);
+                emit(onProgress, request.id(), ProgressStage.PLANNING, "Planning command", 0, OptionalLong.empty());
+                CommandResult result = executePlan(plan, submission, request.id(), onProgress);
+                cancelled(submission);
+                outcome = terminal(request.id(), CommandStatus.SUCCEEDED, summary(result),
+                        Optional.of(result), Optional.empty(), started);
+            }
         } catch (CommandParseException e) {
             outcome = terminal(request.id(), CommandStatus.REJECTED, e.error().message(),
                     Optional.empty(), Optional.of(e.error()), started);
@@ -832,6 +848,62 @@ public final class DefaultCommandGateway implements CommandGateway {
     }
 
     /**
+     * Executes a typed multi-step plan sequentially. Failure policy: a step
+     * that cannot run at all (state/infrastructure) stops dependent later
+     * steps, which are recorded as SKIPPED; a step that ran but reported an
+     * honest non-success (e.g. BUILD_FAILED) does NOT stop the plan because
+     * diagnostics and outcome steps exist precisely to explain it. Cancellation
+     * is honoured between steps. The planner never touches file mutations —
+     * no step can bypass confirmation.
+     */
+    private CommandResult executePlanSteps(
+            com.jade.api.ExecutionPlan plan,
+            Submission cancellation,
+            UUID requestId,
+            Consumer<ProgressEvent> onProgress) throws ServiceException {
+        List<com.jade.api.ExecutionStepResult> trace = new ArrayList<>();
+        boolean blocked = false;
+        for (com.jade.api.PlanStep step : plan.steps()) {
+            long stepStart = System.nanoTime();
+            if (blocked) {
+                trace.add(new com.jade.api.ExecutionStepResult(step,
+                        com.jade.api.ExecutionStepResult.StepStatus.SKIPPED, 0, Optional.empty()));
+                continue;
+            }
+            cancelled(cancellation);
+            emit(onProgress, requestId, ProgressStage.EXECUTING,
+                "Executing plan step: " + step, 0, OptionalLong.empty());
+            try {
+                CommandResult stepResult = switch (step) {
+                    case INSPECT_PROJECT -> projectInspectionService.inspect(requireActiveProject());
+                    case RUN_TESTS -> executeProjectOperation(ProjectOperation.TEST);
+                    case RUN_BUILD -> executeProjectOperation(ProjectOperation.BUILD);
+                    case DIAGNOSTICS -> analyzeProjectDiagnostics();
+                    case LAST_PROJECT_OUTCOME -> lastProjectOutcome();
+                };
+                long duration = (System.nanoTime() - stepStart) / 1_000_000;
+                boolean honestFailure = stepResult instanceof ProjectOperationResult operation
+                        && operation.status() != ProjectOperationStatus.SUCCEEDED;
+                trace.add(new com.jade.api.ExecutionStepResult(step,
+                        honestFailure
+                                ? com.jade.api.ExecutionStepResult.StepStatus.FAILED_RESULT
+                                : com.jade.api.ExecutionStepResult.StepStatus.SUCCEEDED,
+                        duration, Optional.of(stepResult)));
+                // An honest tool failure unblocks diagnostics-style follow-ups:
+                // the plan continues, per the failure policy.
+            } catch (ServiceException e) {
+                long duration = (System.nanoTime() - stepStart) / 1_000_000;
+                trace.add(new com.jade.api.ExecutionStepResult(step,
+                        com.jade.api.ExecutionStepResult.StepStatus.ERROR, duration, Optional.empty()));
+                // Infrastructure/state failure: later steps cannot be trusted
+                // to run meaningfully, so they are skipped and recorded.
+                blocked = true;
+            }
+        }
+        return new com.jade.api.ExecutionResult(trace);
+    }
+
+    /**
      * Structured diagnostics for the most recent project operation of this
      * session. No operation yet is an honest rejection; a succeeded run is
      * reported as zero detected failures rather than analysed for problems.
@@ -1175,6 +1247,16 @@ public final class DefaultCommandGateway implements CommandGateway {
         if (result instanceof DiagnosticCount count) {
             return count.failedTestCount() + " failing test(s) detected; last operation "
                     + count.lastStatus();
+        }
+        if (result instanceof com.jade.api.ExecutionResult execution) {
+            long executed = execution.trace().stream()
+                    .filter(step -> step.status() != com.jade.api.ExecutionStepResult.StepStatus.SKIPPED)
+                    .count();
+            long succeeded = execution.trace().stream()
+                    .filter(step -> step.status() == com.jade.api.ExecutionStepResult.StepStatus.SUCCEEDED)
+                    .count();
+            return "Executed " + executed + " plan step(s), " + succeeded + " succeeded"
+                    + (execution.allStepsSucceeded() ? "" : "; see the per-step trace");
         }
         return "Command history loaded";
     }

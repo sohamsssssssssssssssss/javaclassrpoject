@@ -22,5 +22,6 @@ public sealed interface CommandResult permits
         TodoFindings,
         MainClassCandidates,
         DiagnosticsReport,
-        DiagnosticCount {
+        DiagnosticCount,
+        ExecutionResult {
 }
