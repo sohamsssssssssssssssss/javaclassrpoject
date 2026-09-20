@@ -157,6 +157,13 @@ public final class CommandParser {
                 if (tokens.size() == 3 && keyword(tokens.get(1)).equals("info")) {
                     return new CommandPlan.FileInfo(tokens.get(2).value().strip());
                 }
+                if (tokens.size() >= 4 && keyword(tokens.get(1)).equals("info")
+                        && keyword(tokens.get(2)).equals("for") && keyword(tokens.get(3)).equals("file")) {
+                    return new CommandPlan.SelectByName(join(tokens.subList(4, tokens.size())).strip());
+                }
+                if (tokens.size() >= 3 && keyword(tokens.get(1)).equals("select") && keyword(tokens.get(2)).equals("file")) {
+                    return new CommandPlan.SelectByName(join(tokens.subList(3, tokens.size())).strip());
+                }
                 throw invalid("Usage: file info <name>");
             }
             case "what" -> {

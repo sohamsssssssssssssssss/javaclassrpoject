@@ -57,6 +57,8 @@ public final class JadeApplication extends Application {
     private AudioCaptureService audioCapture;
     private SpeechSynthesisService speechSynthesis;
     private VoiceCommandController voiceController;
+    private com.jade.ui.ProjectCenterPanel projectCenterPanel;
+    private com.jade.ui.SystemActivityPanel systemActivityPanel;
 
     @Override
     public void start(Stage stage) {
@@ -121,8 +123,16 @@ public final class JadeApplication extends Application {
                     new com.jade.services.project.MavenProjectProcessRunner());
             commandUI = new CommandUI(gateway);
             commandUI.setSearchScope(configuration.scopeDescription());
+            com.jade.ui.ExecutionBrainPanel brain = new com.jade.ui.ExecutionBrainPanel();
+            commandUI.setExecutionBrain(brain);
             commandUI.setVoicePanel(buildVoiceStack(configuration));
-            Scene scene = new Scene(commandUI, 900, 680);
+            com.jade.ui.ProjectCenterPanel projectPanel = new com.jade.ui.ProjectCenterPanel(gateway, message -> { });
+            com.jade.ui.SystemActivityPanel systemPanel = new com.jade.ui.SystemActivityPanel(gateway);
+            systemPanel.setCapabilities("Search scope: " + configuration.scopeDescription());
+            this.projectCenterPanel = projectPanel;
+            this.systemActivityPanel = systemPanel;
+            com.jade.ui.CommandCenterUI center = new com.jade.ui.CommandCenterUI(commandUI, projectPanel, systemPanel);
+            Scene scene = new Scene(center, 980, 700);
             applyStyles(scene);
             stage.setMinWidth(640);
             stage.setMinHeight(440);
@@ -339,6 +349,14 @@ public final class JadeApplication extends Application {
         if (commandUI != null) {
             commandUI.close();
             commandUI = null;
+        }
+        if (projectCenterPanel != null) {
+            projectCenterPanel.close();
+            projectCenterPanel = null;
+        }
+        if (systemActivityPanel != null) {
+            systemActivityPanel.close();
+            systemActivityPanel = null;
         }
         if (gateway != null) {
             gateway.close();

@@ -360,6 +360,9 @@ public final class DefaultCommandGateway implements CommandGateway {
         if (plan instanceof CommandPlan.SelectFile select) {
             return executeSelection(select, cancellation);
         }
+        if (plan instanceof CommandPlan.SelectByName byName) {
+            return executeSelectionByName(byName, cancellation);
+        }
         if (plan instanceof CommandPlan.OpenSelected) {
             return executeOpenSelected(cancellation);
         }
@@ -697,6 +700,46 @@ public final class DefaultCommandGateway implements CommandGateway {
         sessionState.setSelection(selected);
         // "open the newest" is an open command: the selection is both stored
         // for pronoun follow-ups and handed to the platform opener seam.
+        if (!Files.exists(chosen.path(), LinkOption.NOFOLLOW_LINKS)) {
+            sessionState.clearSelection();
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND,
+                    "The selected file is no longer present: " + chosen.path()));
+        }
+        requireInScope(chosen.path().toAbsolutePath().normalize());
+        fileOpener.open(chosen.path(), cancellation);
+        return selected;
+    }
+
+    /**
+     * Selects one file by exact file name from the current session result
+     * set and opens it. The name is never reinterpreted as a path: if no
+     * result set exists, or no/ multiple matches carry that exact name, the
+     * command is honestly rejected. The subsequent open still passes through
+     * the scope-guarded opener seam below.
+     */
+    private CommandResult executeSelectionByName(CommandPlan.SelectByName plan, Submission cancellation)
+            throws ServiceException {
+        FileSearchResult source = requireLastResult();
+        String wanted = plan.fileName();
+        if (wanted.isEmpty()) {
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND, "File name to select must not be empty"));
+        }
+        java.util.List<FileMatch> named = source.matches().stream()
+                .filter(match -> match.fileName().equals(wanted))
+                .toList();
+        if (named.size() != 1) {
+            throw new ServiceException(error(
+                    ErrorCode.INVALID_COMMAND,
+                    named.isEmpty()
+                            ? "No file named '" + wanted + "' is in the current result set"
+                            : "Multiple files named '" + wanted + "' are in the current result set"));
+        }
+        FileMatch chosen = named.get(0);
+        SelectedFileResult selected = new SelectedFileResult(
+                chosen.path(), chosen.fileName(), chosen.sizeBytes(), chosen.modifiedAt());
+        sessionState.setSelection(selected);
         if (!Files.exists(chosen.path(), LinkOption.NOFOLLOW_LINKS)) {
             sessionState.clearSelection();
             throw new ServiceException(error(

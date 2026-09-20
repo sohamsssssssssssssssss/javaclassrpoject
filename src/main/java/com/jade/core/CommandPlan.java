@@ -117,6 +117,18 @@ public sealed interface CommandPlan {
     }
 
     /**
+     * Selects one file by exact name — resolved strictly against the current
+     * session result set, never against an arbitrary filesystem path. Used
+     * by the search-result card's Open action; the subsequent "open it"
+     * still goes through the normal scope-guarded opener seam.
+     */
+    record SelectByName(String fileName) implements CommandPlan {
+        public SelectByName {
+            Objects.requireNonNull(fileName, "fileName");
+        }
+    }
+
+    /**
      * Opens the single contextual file referent: the current explicit
      * selection when present, otherwise the sole file of the current result
      * set. Never a guess — ambiguous or missing referents are rejections.

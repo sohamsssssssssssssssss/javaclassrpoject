@@ -19,6 +19,7 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
     private final VBox results = new VBox(8);
     private VBox topBox;
     private VoicePanel voicePanel;
+    private com.jade.ui.ExecutionBrainPanel executionBrain;
     private final Label searchScopeLabel = new Label();
     private CommandSubscription currentSubscription;
 
@@ -82,6 +83,9 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             return;
         }
         setRunning(true);
+        if (executionBrain != null) {
+            executionBrain.resetForNewCommand();
+        }
         currentSubscription = gateway.submit(
                 CommandRequest.create(text), this::onProgress, this::onComplete);
     }
@@ -94,6 +98,9 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
     }
 
     private void onProgress(ProgressEvent event) {
+        if (executionBrain != null) {
+            executionBrain.onProgressEvent(event);
+        }
         onFxThread(() -> {
             statusLabel.setText(event.message());
             OptionalLong total = event.totalUnits();
@@ -110,6 +117,12 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         onFxThread(() -> {
             currentSubscription = null;
             setRunning(false);
+            if (executionBrain != null) {
+                if (outcome.result().orElse(null) instanceof com.jade.api.ExecutionResult) {
+                    executionBrain.markMultiStepPlan();
+                }
+                executionBrain.onOutcome(outcome);
+            }
             results.getChildren().clear();
             switch (outcome.status()) {
                 case CANCELLED -> showMessage("Command cancelled", "label-subtle");
@@ -135,13 +148,19 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             case UndoResult undo -> showUndo(undo);
             case ContentSearchResult content -> showContentSearch(content);
             case SelectedFileResult selected -> {
-                showMessage("✓ " + selected.fileName() + "  (" + selected.sizeBytes() + " bytes)", "text-accent");
-                showMessage(selected.path().toString(), "label-subtle");
+                VBox card = new VBox(3);
+                card.getStyleClass().add("result-card");
+                Label name = new Label("✓ " + selected.fileName());
+                name.getStyleClass().add("text-accent");
+                Label meta = new Label(formatBytes(selected.sizeBytes()) + "  ·  opened with the default app");
+                meta.getStyleClass().add("label-subtle");
+                Label path = new Label(selected.path().toString());
+                path.getStyleClass().add("label-subtle");
+                path.setWrapText(true);
+                card.getChildren().addAll(name, meta, path);
+                results.getChildren().add(card);
             }
-            case FileMutationPreview preview -> {
-                showMessage("⏸ " + preview.pending().originalCommand(), "text-accent");
-                showMessage("Type 'confirm' to apply, or 'cancel' to discard.", "label-subtle");
-            }
+            case FileMutationPreview preview -> showMutationPreview(preview);
             case CancellationReceipt cancelled -> showMessage(cancelled.message(), "label-subtle");
             case ProjectContext project -> {
                 showMessage("✓ Active project: " + project.name(), "text-accent");
@@ -203,16 +222,71 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         }
     }
 
+    /** The in-place confirmation card: exactly what will change, and how. */
+    private void showMutationPreview(FileMutationPreview preview) {
+        com.jade.api.PendingConfirmation pending = preview.pending();
+        VBox card = new VBox(6);
+        card.getStyleClass().add("result-card");
+        Label headline = new Label("⏸  " + capitalize(pending.kind().name().toLowerCase(java.util.Locale.ROOT))
+                + "  ·  risk: " + pending.riskLevel());
+        headline.getStyleClass().add("text-accent");
+        Label command = new Label(pending.originalCommand());
+        command.getStyleClass().add("text-primary");
+        command.setWrapText(true);
+        card.getChildren().addAll(headline, command);
+        Label destination = new Label("Destination: " + pending.destinationDescription());
+        destination.getStyleClass().add("label-subtle");
+        destination.setWrapText(true);
+        card.getChildren().add(destination);
+        for (com.jade.api.PendingConfirmation.PlannedFile file : pending.plannedFiles()) {
+            Label line = new Label("  " + file.source() + "  →  " + file.target());
+            line.getStyleClass().add("text-primary");
+            line.setWrapText(true);
+            card.getChildren().add(line);
+        }
+        HBox actions = new HBox(8);
+        Button confirm = new Button("Confirm");
+        confirm.getStyleClass().add("button-primary");
+        confirm.setOnAction(ignored -> {
+            commandField.setText("confirm");
+            onSubmit();
+        });
+        Button cancel = new Button("Cancel");
+        cancel.getStyleClass().add("button-secondary");
+        cancel.setOnAction(ignored -> {
+            commandField.setText("cancel");
+            onSubmit();
+        });
+        actions.getChildren().addAll(confirm, cancel);
+        card.getChildren().add(actions);
+        results.getChildren().add(card);
+    }
+
+    /** The undo timeline: most recent reversed operation first. */
     private void showUndo(UndoResult undo) {
+        VBox timeline = new VBox(4);
+        timeline.getStyleClass().add("result-card");
+        Label title = new Label(undo.fullyReversed()
+                ? "↩ Undo complete" : "↩ Undo partially applied");
+        title.getStyleClass().add(undo.fullyReversed() ? "text-accent" : "label-warning");
+        timeline.getChildren().add(title);
         for (UndoEntry.JournalRow row : undo.rows()) {
             String line = row.entry().source().getFileName() + "  →  " + row.entry().target().getFileName();
-            switch (row.status()) {
-                case UNDONE -> showMessage("✓ Restored " + line, "text-accent");
-                case FAILED -> showMessage("✗ Could not restore " + line + " — "
-                        + row.error().map(StructuredError::message).orElse("failed"), "label-warning");
-                case ACTIVE -> showMessage("• " + line, "label-subtle");
-            }
+            Label entry = new Label(switch (row.status()) {
+                case UNDONE -> "✓ restored  " + line;
+                case FAILED -> "✗ could not restore  " + line + " — "
+                        + row.error().map(StructuredError::message).orElse("failed");
+                case ACTIVE -> "• still active  " + line;
+            });
+            entry.getStyleClass().add(switch (row.status()) {
+                case UNDONE -> "text-primary";
+                case FAILED -> "label-warning";
+                case ACTIVE -> "label-subtle";
+            });
+            entry.setWrapText(true);
+            timeline.getChildren().add(entry);
         }
+        results.getChildren().add(timeline);
     }
 
     /** Renders document content search: matches with snippets, plus every unreadable document. */
@@ -409,22 +483,55 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
 
     private void showFiles(FileSearchResult files) {
         if (files.matches().isEmpty()) {
-            showMessage("No matching PDF files found", "label-subtle");
+            showMessage("No matching files found", "label-subtle");
         } else {
             for (FileMatch match : files.matches()) {
-                Label path = new Label(match.path() + "  (" + formatBytes(match.sizeBytes()) + ")");
-                path.setWrapText(true);
-                path.getStyleClass().add("text-primary");
-                results.getChildren().add(path);
+                results.getChildren().add(fileCard(match));
             }
         }
-        showMessage("Visited " + files.visitedFiles() + " file(s)", "label-subtle");
+        HBox footer = new HBox(10);
+        Label visited = new Label("Visited " + files.visitedFiles() + " file(s)");
+        visited.getStyleClass().add("label-subtle");
+        footer.getChildren().add(visited);
         if (files.resultLimitReached()) {
-            showMessage("Result limit reached (50)", "label-warning");
+            Label limit = new Label("Result limit reached (50)");
+            limit.getStyleClass().add("label-warning");
+            footer.getChildren().add(limit);
         }
         if (files.scanLimitReached()) {
-            showMessage("Scan limit reached (10,000 files); results are partial", "label-warning");
+            Label limit = new Label("Scan limit reached (10,000 files); results are partial");
+            limit.getStyleClass().add("label-warning");
+            footer.getChildren().add(limit);
         }
+        results.getChildren().add(footer);
+    }
+
+    /** A bounded search-result card: name, size, date, and an Open action. */
+    private javafx.scene.Node fileCard(FileMatch match) {
+        VBox card = new VBox(3);
+        card.getStyleClass().add("result-card");
+        HBox titleRow = new HBox(8);
+        Label name = new Label(match.fileName());
+        name.getStyleClass().add("text-primary");
+        name.setWrapText(true);
+        HBox.setHgrow(name, javafx.scene.layout.Priority.ALWAYS);
+        Label meta = new Label(formatBytes(match.sizeBytes()) + "  ·  "
+                + java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+                        .withZone(java.time.ZoneId.systemDefault()).format(match.modifiedAt()));
+        meta.getStyleClass().add("label-subtle");
+        Button open = new Button("Open");
+        open.getStyleClass().add("button-mini");
+        open.setOnAction(ignored -> {
+            String command = "open the file " + match.path();
+            commandField.setText(command);
+            onSubmit();
+        });
+        titleRow.getChildren().addAll(name, meta, open);
+        Label path = new Label(match.path().toString());
+        path.getStyleClass().add("label-subtle");
+        path.setWrapText(true);
+        card.getChildren().addAll(titleRow, path);
+        return card;
     }
 
     private void showSystem(SystemSnapshot snapshot) {
@@ -503,6 +610,21 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         this.voicePanel = panel;
         if (topBox != null) {
             topBox.getChildren().add(panel);
+        }
+    }
+
+    /**
+     * Adds the optional live execution brain strip above the results area
+     * without changing the existing layout. No-op when already installed.
+     */
+    public void setExecutionBrain(com.jade.ui.ExecutionBrainPanel brain) {
+        java.util.Objects.requireNonNull(brain, "brain");
+        if (executionBrain != null) {
+            return;
+        }
+        this.executionBrain = brain;
+        if (topBox != null) {
+            topBox.getChildren().add(brain);
         }
     }
 

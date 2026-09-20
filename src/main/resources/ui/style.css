@@ -4,6 +4,148 @@
     -fx-font-size: 14px;
 }
 
+/* ── Command center shell ─────────────────────────────────────────── */
+.command-center > .tab-header-area {
+    -fx-background-color: #0d0d36;
+    -fx-padding: 4 12 0 12;
+}
+.command-center > .tab-header-area .tab {
+    -fx-background-color: transparent;
+    -fx-padding: 6 16 6 16;
+}
+.command-center > .tab-header-area .tab .tab-label {
+    -fx-text-fill: #a8a8b8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+.command-center > .tab-header-area .tab:selected .tab-label {
+    -fx-text-fill: #0fbcef;
+}
+.command-center > .tab-header-area .tab:selected {
+    -fx-border-color: transparent transparent #0fbcef transparent;
+    -fx-border-width: 0 0 2 0;
+}
+.command-center .tab-content-area {
+    -fx-background-color: #0a0a2e;
+}
+.tab-title {
+    -fx-text-fill: #0fbcef;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+.section-title {
+    -fx-text-fill: #f1f1f1;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 0 0 0;
+}
+.center-scroll, .center-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* ── Metric cards, chips, result cards, empty states ──────────────── */
+.metric-card {
+    -fx-background-color: #16213e;
+    -fx-background-radius: 7;
+    -fx-padding: 8 12 8 12;
+}
+.metric-term {
+    -fx-text-fill: #8b8b9e;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+.metric-value {
+    -fx-text-fill: #f1f1f1;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+.dep-chip {
+    -fx-background-color: #1b2a4a;
+    -fx-background-radius: 20;
+    -fx-padding: 4 10 4 10;
+    -fx-text-fill: #cfe6f7;
+    -fx-font-size: 12px;
+}
+.dep-chip .tooltip {
+    -fx-background-color: #16213e;
+    -fx-text-fill: #f1f1f1;
+}
+.result-card {
+    -fx-background-color: #12192f;
+    -fx-background-radius: 8;
+    -fx-border-color: #232f52;
+    -fx-border-radius: 8;
+    -fx-padding: 10;
+}
+.empty-state {
+    -fx-text-fill: #8b8b9e;
+    -fx-font-size: 13px;
+    -fx-background-color: #12192f;
+    -fx-background-radius: 8;
+    -fx-padding: 16;
+}
+.speaker-chip {
+    -fx-background-color: #1b2a4a;
+    -fx-background-radius: 20;
+    -fx-padding: 3 10 3 10;
+    -fx-text-fill: #0fbcef;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+}
+
+/* ── Execution brain (V3) ─────────────────────────────────────────── */
+.stage-pill {
+    -fx-background-color: #16213e;
+    -fx-background-radius: 20;
+    -fx-padding: 3 10 3 10;
+    -fx-text-fill: #8b8b9e;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+.stage-pill.stage-active {
+    -fx-background-color: #0fbcef;
+    -fx-text-fill: #0a0a2e;
+}
+.stage-pill.stage-done {
+    -fx-background-color: #126c43;
+    -fx-text-fill: #eafff4;
+}
+.stage-pill.stage-skipped {
+    -fx-background-color: #33405c;
+    -fx-text-fill: #8b8b9e;
+}
+.brain-arrow {
+    -fx-background-color: #5d6a7c;
+    -fx-min-width: 8;
+    -fx-max-width: 8;
+    -fx-min-height: 2;
+    -fx-max-height: 2;
+}
+.plan-badge {
+    -fx-background-color: #4b2a7a;
+    -fx-background-radius: 20;
+    -fx-padding: 3 10 3 10;
+    -fx-text-fill: #e6d9ff;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+
+/* ── Voice (V5) ───────────────────────────────────────────────────── */
+.eq-bar {
+    -fx-background-color: #0fbcef;
+    -fx-background-radius: 2;
+}
+.voice-speaking {
+    -fx-border-color: #0fbcef;
+    -fx-border-width: 0 0 0 2;
+}
+.voice-state-listening { -fx-text-fill: #0fbcef; -fx-font-weight: bold; }
+.voice-state-processing { -fx-text-fill: #ffd166; -fx-font-weight: bold; }
+.voice-state-executing { -fx-text-fill: #ffd166; -fx-font-weight: bold; }
+.voice-state-speaking { -fx-text-fill: #7bd88f; -fx-font-weight: bold; }
+.voice-state-error { -fx-text-fill: #ff7b8a; -fx-font-weight: bold; }
+
+/* ── Existing text styles (unchanged) ─────────────────────────────── */
 .text-field, .scroll-pane, .scroll-pane > .viewport {
     -fx-background-color: #16213e;
     -fx-text-fill: #f1f1f1;
@@ -28,8 +170,29 @@
     -fx-text-fill: #e94d5f;
 }
 
+.button-mini {
+    -fx-background-color: #1b2a4a;
+    -fx-text-fill: #0fbcef;
+    -fx-font-size: 11px;
+    -fx-padding: 2 10 2 10;
+}
+
 .text-primary { -fx-text-fill: #f1f1f1; }
 .text-accent { -fx-text-fill: #0fbcef; -fx-font-weight: bold; }
 .label-subtle { -fx-text-fill: #a8a8b8; }
 .label-warning { -fx-text-fill: #ff7b8a; }
 .progress-bar { -fx-accent: #0fbcef; }
+
+/* ── Structure tree (V2) ──────────────────────────────────────────── */
+.structure-tree, .structure-tree > .virtual-flow {
+    -fx-background-color: transparent;
+}
+.structure-tree .tree-cell {
+    -fx-text-fill: #cfe0f5;
+    -fx-font-size: 12px;
+    -fx-padding: 1 4 1 4;
+    -fx-background-color: transparent;
+}
+.structure-tree .tree-cell:selected {
+    -fx-background-color: #1b2a4a;
+}
