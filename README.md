@@ -60,6 +60,18 @@ On macOS, launch the generated image with `open target/release/JADE.app`. App im
 - `list files` (top-level files of the scope; usable as a selection)
 - `file info <name>` / `what is <name>` (top-level scope files, case-insensitive)
 - `find <ext> files containing "text"` (document-content search over the last search of the session; TXT, PDF, DOCX and other Tika-supported formats; at most 100 documents)
+- `open project <path>` (activates a Maven project: directory + `pom.xml`)
+- `what project am I working on` / `what kind of project is this` / `give me a project summary` / `project summary` / `inspect this|the project`
+- `show me the project structure` (bounded tree: depth ≤ 6, ≤ 400 entries, truncation reported)
+- `how many java files [are there]` / `where are the tests` (source/test/resource/package counts)
+- `what dependencies does it use` (declared POM dependencies; unresolved/inherited versions are reported as UNKNOWN)
+- `what is|what's the main class` / `what are the main classes` (static main-method detection; 0/1/many reported, never guessed)
+- `are there any todos` / `what are the todos` (TODO/FIXME scan; ≤ 50 findings, bounded snippets)
+- `run the tests` / `build it` (bounded Maven runs with timeout and truthful output tail)
+- `what happened` (last project operation) / `what failed` / `show me the errors` / `how many tests failed` (structured diagnostics)
+- Compound requests: `inspect this project and run [the] tests`, `inspect this project and build it`, `run [the] tests and tell me what failed`, `run [the] tests and show me the errors`, `run [the] tests and what failed|happened`, `build it and (tell me) what happened`
+
+Project support is **static and bounded**: inspection never modifies the project, never executes Maven to answer questions, and never resolves/downloads dependencies. Diagnostics read Surefire XML reports inside the active project plus the captured output of the last run; unmatched output is reported as UNKNOWN, never interpreted. The planner is deterministic — every supported compound phrase maps to a fixed typed step list, and it cannot generate arbitrary commands or touch file mutations.
 
 Search returns at most 50 matches and visits at most 10,000 regular files. It never follows symbolic links. MB means 1,048,576 bytes. Filenames and paths retain their original case.
 
@@ -67,4 +79,4 @@ File mutations are confined to the configured scope folder: JADE never follows s
 
 Application launch is implemented on macOS using explicit `ProcessBuilder` argument lists. Windows/Linux return a visible unsupported-platform error. A successful outcome means the OS accepted the launch request; it does not claim the window was observed.
 
-Voice input (optional Vosk model, see `docs/AUDIO_FEASIBILITY.md`), speaker-identified greetings and document-content search (Apache Tika) are available as of sprints 3–4; spoken commands use exactly the same grammar as typed commands. Still not available: multi-step planning, LLMs, automation, file deletion and workspace restore.
+Voice input (optional Vosk model, see `docs/AUDIO_FEASIBILITY.md`), speaker-identified greetings and document-content search (Apache Tika) are available as of sprints 3–4; spoken commands use exactly the same grammar as typed commands — including the project, diagnostics and compound-request grammar. Bounded multi-step planning (the fixed compound list above) exists as of sprint 5. Still not available: arbitrary natural-language planning, LLMs/AI reasoning, automation, file deletion and workspace restore. Legacy `JARVIS_*` environment variables and a legacy data directory are honoured only as a one-time migration fallback for existing installs; JADE keys and the JADE data directory always win.

@@ -25,6 +25,15 @@
 - TTS is the platform adapter seam (`SpeechSynthesisService`); the shipped implementation is macOS `/usr/bin/say` with an explicit, unit-tested argument list. Other platforms fail visibly.
 - Sprint 1 distribution is a host-specific `jpackage` app image. The verified artifact is macOS ARM64; Windows/Linux packages must be built and checked on those target platforms.
 
+## Sprint 5 project intelligence, diagnostics and planner decisions (2026-09-20)
+
+- **Project inspection is static and read-only.** It parses only the active project's own `pom.xml` (no parent resolution, no profile merging) and walks the project with bounded traversal: no symlink following, build outputs and IDE metadata excluded, depth ≤ 6, ≤ 400 tree entries, ≤ 20,000 visited entries, ≤ 1 MiB scanned per Java file. Every bound reports itself truthfully (`truncated` / `scanIncomplete`) instead of silently degrading. Unknown/inherited POM values are UNKNOWN, never invented.
+- **Main-class detection is signature-based, not name-based.** `public static void main` occurrences are reported as 0/1/many candidates; JADE never claims which one is "the" entry point.
+- **Diagnostics are heuristic and conservative.** Surefire XML is the trusted evidence (parsed hardened against XXE; reports resolving outside the project root are refused); captured output is scanned with a fixed pattern set; anything unmatched stays UNKNOWN. There is no automatic fixing and no AI reasoning anywhere in this pipeline.
+- **The planner is a lookup, not a reasoner.** Each supported compound phrase is one literal branch mapping to a fixed `PlanStep` list; `ExecutionPlan` accepts at most 5 steps of enum values, so plans cannot carry text, arguments, or mutations. Failure semantics: infrastructure failure ⇒ later dependent steps SKIPPED (recorded); honest tool failure ⇒ plan continues into diagnostics/outcome steps; cancellation ⇒ checked between steps. Existing confirmation rules are unreachable-by-construction from planner steps.
+- **Legacy compatibility is deliberate and migration-only.** `JARVIS_*` env vars and the legacy `Application Support/JARVIS` directory are consulted only when the JADE equivalents are absent; legacy data is copied to the JADE location, never deleted, and the JADE location always wins when present. This exists solely for existing installs; no new code may depend on it.
+- **Legacy naming freeze:** the repository/worktree directory keeps its historical name `jarvis-integration`; the product identity in code, UI, docs and artifacts is JADE everywhere else.
+
 ## Next sprint gate
 
 Sprint 4 candidates: live-mic enrollment command, streaming partial transcripts in the UI, re-tuning the speaker threshold with real owners' voices, Windows SAPI TTS adapter behind the same seam, and packaging the voice stack into the jpackage image with the model-install step documented for end users.

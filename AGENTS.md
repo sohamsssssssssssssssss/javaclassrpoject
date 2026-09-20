@@ -11,7 +11,7 @@
 
 ## Exclusive ownership
 
-- **Codex/Soham:** `pom.xml`, `com.jade.api`, `com.jade.app`, `com.jade.core`, central docs and integration.
+- **Codex/Soham:** `pom.xml`, `com.jade.api`, `com.jade.app`, `com.jade.core`, central docs and integration. Sprint 5 additions: `MavenProjectInspectionService` + `MavenDiagnosticsService` live in `com.jade.services.project` (static, bounded, read-only), the planner is `DefaultCommandPlanner` (lookup, not a reasoner), and every new result type is a sealed `CommandResult` rendered in `CommandUI`.
 - **OpenCode:** `com.jade.ui`, `src/main/resources/ui`, matching UI tests, `docs/handoffs/opencode.md`.
 - **Freebuff:** `com.jade.services`, `src/main/resources/db`, matching service tests, `docs/handoffs/freebuff.md`.
 - Workers request API/build/central-doc changes in their handoff; they do not edit another owner's files.
