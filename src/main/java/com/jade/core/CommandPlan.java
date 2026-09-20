@@ -164,4 +164,31 @@ public sealed interface CommandPlan {
     /** Reports the most recent project operation of this session, if any. */
     record LastProjectOutcome() implements CommandPlan {
     }
+
+    /**
+     * Full static inspection of the active project (summary, structure,
+     * dependencies, main candidates, TODO/FIXME) — read-only, bounded.
+     */
+    record InspectProject() implements CommandPlan {
+    }
+
+    /** The bounded rendered structure tree of the active project. */
+    record ProjectStructure() implements CommandPlan {
+    }
+
+    /** Counts of the active project's Java sources, tests and resources. */
+    record ProjectSourceCounts() implements CommandPlan {
+    }
+
+    /** Declared Maven dependencies of the active project. */
+    record ProjectDependencies() implements CommandPlan {
+    }
+
+    /** Static main-class candidates of the active project. */
+    record ProjectMainCandidates() implements CommandPlan {
+    }
+
+    /** Bounded TODO/FIXME findings of the active project. */
+    record ProjectTodos() implements CommandPlan {
+    }
 }

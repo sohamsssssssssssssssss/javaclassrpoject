@@ -174,10 +174,19 @@ public final class CommandParser {
                 if (tokens.size() == 3 && keyword(tokens.get(1)).equals("is")) {
                     return new CommandPlan.FileInfo(tokens.get(2).value().strip());
                 }
+                CommandPlan projectQuestion = parseProjectQuestion(tokens);
+                if (projectQuestion != null) {
+                    return projectQuestion;
+                }
                 throw invalid("Unsupported command. Try 'what is <file name>', "
-                        + "'what project am I working on', or 'what happened'");
+                        + "'what project am I working on', 'what happened', "
+                        + "or 'what dependencies does it use'");
             }
             default -> {
+                CommandPlan projectQuestion = parseProjectPhrase(tokens);
+                if (projectQuestion != null) {
+                    return projectQuestion;
+                }
                 if (matches(tokens, "system", "status") || matches(tokens, "status")) {
                     return new CommandPlan.SystemStatus();
                 }
@@ -187,6 +196,132 @@ public final class CommandParser {
                 throw invalid("Unsupported command. Try open, find PDFs, system status, or show history");
             }
         }
+    }
+
+    /**
+     * Non-"what" bounded project-intelligence phrases. Each maps to exactly
+     * one typed inspection plan; anything else falls through to rejection.
+     */
+    private CommandPlan parseProjectPhrase(List<CommandTokenizer.Token> tokens) {
+        List<String> words = phraseWords(tokens);
+        // "show me the project structure" / "show the project structure" / "show project structure"
+        if ((words.size() == 5 && words.get(0).equals("show") && words.get(1).equals("me")
+                && words.get(2).equals("the") && words.get(3).equals("project")
+                && words.get(4).equals("structure"))
+                || (words.size() == 4 && words.get(0).equals("show") && words.get(1).equals("the")
+                        && words.get(2).equals("project") && words.get(3).equals("structure"))
+                || (words.size() == 3 && words.get(0).equals("show") && words.get(1).equals("project")
+                        && words.get(2).equals("structure"))) {
+            return new CommandPlan.ProjectStructure();
+        }
+        // "how many java files are there" / "how many java files"
+        if ((words.size() == 6 && words.get(0).equals("how") && words.get(1).equals("many")
+                && words.get(2).equals("java") && words.get(3).equals("files")
+                && words.get(4).equals("are") && words.get(5).equals("there"))
+                || (words.size() == 4 && words.get(0).equals("how") && words.get(1).equals("many")
+                        && words.get(2).equals("java") && words.get(3).equals("files"))) {
+            return new CommandPlan.ProjectSourceCounts();
+        }
+        // "give me a project summary" / "project summary"
+        if ((words.size() == 5 && words.get(0).equals("give") && words.get(1).equals("me")
+                && words.get(2).equals("a") && words.get(3).equals("project")
+                && words.get(4).equals("summary"))
+                || (words.size() == 2 && words.get(0).equals("project")
+                        && words.get(1).equals("summary"))) {
+            return new CommandPlan.InspectProject();
+        }
+        // "where are the tests"
+        if (words.size() == 4 && words.get(0).equals("where") && words.get(1).equals("are")
+                && words.get(2).equals("the") && words.get(3).equals("tests")) {
+            return new CommandPlan.ProjectSourceCounts();
+        }
+        // "are there any todos" / "are there any todos?"
+        if (words.size() == 4 && words.get(0).equals("are") && words.get(1).equals("there")
+                && words.get(2).equals("any") && words.get(3).equals("todos")) {
+            return new CommandPlan.ProjectTodos();
+        }
+        if (words.size() == 5 && words.get(0).equals("are") && words.get(1).equals("there")
+                && words.get(2).equals("any") && words.get(3).equals("todos")
+                && words.get(4).equals("?")) {
+            return new CommandPlan.ProjectTodos();
+        }
+        // "inspect this project" / "inspect the project" / "inspect project"
+        if ((words.size() == 3 && words.get(0).equals("inspect")
+                && (words.get(1).equals("this") || words.get(1).equals("the"))
+                && words.get(2).equals("project"))
+                || (words.size() == 2 && words.get(0).equals("inspect")
+                        && words.get(1).equals("project"))) {
+            return new CommandPlan.InspectProject();
+        }
+        return null;
+    }
+
+    /**
+     * Bounded project-intelligence question grammar under "what":
+     * kind of project is this / give me a project summary (also bare
+     * "project summary"), dependencies does it use, main class, todos.
+     * Nothing here is a generic question answerer — each phrase maps to
+     * exactly one typed inspection plan.
+     */
+    /** Lower-cased keywords with one trailing question mark stripped. */
+    private static List<String> phraseWords(List<CommandTokenizer.Token> tokens) {
+        return tokens.stream().map(CommandParser::keyword)
+                .map(word -> word.endsWith("?") ? word.substring(0, word.length() - 1) : word)
+                .filter(word -> !word.isEmpty())
+                .toList();
+    }
+
+    private CommandPlan parseProjectQuestion(List<CommandTokenizer.Token> tokens) {
+        List<String> words = phraseWords(tokens);
+        // "what kind of project is this"
+        if (words.size() == 6 && words.get(1).equals("kind") && words.get(2).equals("of")
+                && words.get(3).equals("project") && words.get(4).equals("is")
+                && words.get(5).equals("this")) {
+            return new CommandPlan.InspectProject();
+        }
+        // "what are the main classes" (plural acceptance of the main-class intent)
+        if (words.size() == 5 && words.get(1).equals("are") && words.get(2).equals("the")
+                && words.get(3).equals("main") && words.get(4).equals("classes")) {
+            return new CommandPlan.ProjectMainCandidates();
+        }
+        // "what dependencies does it use" / "... does this project use"
+        if (words.size() == 5 && words.get(1).equals("dependencies") && words.get(2).equals("does")
+                && words.get(3).equals("it") && words.get(4).equals("use")) {
+            return new CommandPlan.ProjectDependencies();
+        }
+        if (words.size() == 7 && words.get(1).equals("dependencies") && words.get(2).equals("does")
+                && words.get(3).equals("this") && words.get(4).equals("project")
+                && words.get(5).equals("use") && words.get(6).equals("?")) {
+            return new CommandPlan.ProjectDependencies();
+        }
+        if (words.size() == 6 && words.get(1).equals("dependencies") && words.get(2).equals("does")
+                && words.get(3).equals("this") && words.get(4).equals("project")
+                && words.get(5).equals("use")) {
+            return new CommandPlan.ProjectDependencies();
+        }
+        // "what is the main class" — "is" handled above for files, so this
+        // longer form must be checked before the 3-token file-info form.
+        if (words.size() == 5 && words.get(1).equals("is") && words.get(2).equals("the")
+                && words.get(3).equals("main") && words.get(4).equals("class")) {
+            return new CommandPlan.ProjectMainCandidates();
+        }
+        // "what are the todos" / "what are the todos in this project"
+        if (words.size() == 4 && words.get(1).equals("are") && words.get(2).equals("the")
+                && words.get(3).equals("todos")) {
+            return new CommandPlan.ProjectTodos();
+        }
+        if (words.size() == 8 && words.get(1).equals("are") && words.get(2).equals("the")
+                && words.get(3).equals("todos") && words.get(4).equals("in")
+                && words.get(5).equals("this") && words.get(6).equals("project")
+                && words.get(7).equals("?")) {
+            return new CommandPlan.ProjectTodos();
+        }
+        if (words.size() == 7 && words.get(1).equals("are") && words.get(2).equals("the")
+                && words.get(3).equals("todos") && words.get(4).equals("in")
+                && words.get(5).equals("this") && words.get(6).equals("project")) {
+            return new CommandPlan.ProjectTodos();
+        }
+        return null;
     }
 
     private CommandPlan parseOpen(List<CommandTokenizer.Token> tokens) throws CommandParseException {

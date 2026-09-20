@@ -170,6 +170,12 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
                             + (run.exitCode() == null ? "" : " (exit " + run.exitCode() + ")")
                             + ", " + (run.durationMillis() / 1000.0) + " s", "text-accent"),
                     () -> showMessage("No project operation has run in this session yet.", "label-subtle"));
+            case ProjectInspectionResult inspection -> showProjectInspection(inspection);
+            case ProjectTree tree -> showProjectTree(tree);
+            case ProjectInspectionResult.SourceInventory sources -> showSourceInventory(sources);
+            case DependencyList dependencies -> showDependencies(dependencies);
+            case MainClassCandidates mains -> showMainCandidates(mains);
+            case TodoFindings todos -> showTodoFindings(todos);
         }
     }
 
@@ -225,6 +231,114 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         showMessage("Total: " + content.totalMatches() + " match(es)", "text-accent");
         if (!content.appliedLimits().isEmpty()) {
             showMessage(content.appliedLimits(), "label-warning");
+        }
+    }
+
+    /** Renders the full static project inspection (summary view). */
+    private void showProjectInspection(ProjectInspectionResult inspection) {
+        ProjectInspectionResult.Coordinates c = inspection.coordinates();
+        showMessage("Project: " + c.artifactId() + "  (" + c.groupId() + ":" + c.artifactId()
+                + ":" + c.version() + ")", "text-accent");
+        showMessage("Build system: Maven  ·  Packaging: " + c.packaging()
+                + c.name().map(name -> "  ·  Name: " + name).orElse("")
+                + c.javaVersion().map(java -> "  ·  Java: " + java).orElse(""), "text-primary");
+        ProjectInspectionResult.SourceInventory s = inspection.sources();
+        showMessage("Java files: " + s.javaSourceFiles() + " source, " + s.javaTestFiles()
+                + " test  ·  Other files: " + s.resourceFiles() + "  ·  Packages: "
+                + s.packages(), "text-primary");
+        showMessage("Source roots: " + String.join(", ", s.sourceRoots()) + "  ·  Test roots: "
+                + String.join(", ", s.testRoots()), "label-subtle");
+        showMessage("Dependencies: " + inspection.dependencies().size() + " declared", "text-primary");
+        for (DependencyInfo dependency : inspection.dependencies()) {
+            showMessage("    • " + dependency.groupId() + ":" + dependency.artifactId()
+                    + dependency.version().map(version -> ":" + version).orElse("")
+                    + dependency.scope().map(scope -> " (" + scope + ")").orElse(""),
+                    "label-subtle");
+        }
+        MainClassCandidates mains = inspection.mainCandidates();
+        showMessage("Main candidates: "
+                + (mains.candidates().isEmpty() ? "none found"
+                        : String.valueOf(mains.candidates().size())), "text-primary");
+        for (MainClassCandidates.Candidate candidate : mains.candidates()) {
+            showMessage("    • " + candidate.className() + " — " + candidate.signature(),
+                    "label-subtle");
+        }
+        showMessage("TODO/FIXME: " + inspection.todoFindings().size()
+                + (inspection.todosTruncated() ? " (list truncated)" : ""), "text-primary");
+        for (TodoFinding finding : inspection.todoFindings()) {
+            showMessage("    • " + finding.path() + ":" + finding.lineNumber() + " ["
+                    + finding.marker() + "] "
+                    + finding.snippet().orElse(""), "label-subtle");
+        }
+        if (inspection.scanIncomplete()) {
+            showMessage("(inspection reached walk/size limits; counts are partial)", "label-warning");
+        }
+    }
+
+    /** Renders the bounded project tree with a truthful truncation marker. */
+    private void showProjectTree(ProjectTree tree) {
+        showMessage("Project structure of " + tree.root().getFileName() + " (depth ≤ "
+                + tree.maxDepth() + ")", "text-accent");
+        for (String line : tree.lines()) {
+            showMessage(line.isEmpty() ? " " : line, "label-subtle");
+        }
+        if (tree.truncated()) {
+            showMessage("(tree truncated at " + ProjectTree.MAX_LINES + " entries / "
+                    + ProjectTree.MAX_DEPTH + " levels)", "label-warning");
+        }
+    }
+
+    /** Renders source/test/resource counts and the test roots. */
+    private void showSourceInventory(ProjectInspectionResult.SourceInventory sources) {
+        showMessage("Java source files: " + sources.javaSourceFiles(), "text-accent");
+        showMessage("Java test files: " + sources.javaTestFiles(), "text-accent");
+        showMessage("Other files: " + sources.resourceFiles(), "text-primary");
+        showMessage("Packages: " + sources.packages(), "text-primary");
+        showMessage("Source roots: " + String.join(", ", sources.sourceRoots()), "label-subtle");
+        showMessage("Test roots: " + String.join(", ", sources.testRoots()), "label-subtle");
+    }
+
+    /** Renders the declared dependency list. */
+    private void showDependencies(DependencyList dependencies) {
+        if (dependencies.dependencies().isEmpty()) {
+            showMessage("The project declares no dependencies in its pom.xml.", "label-subtle");
+            return;
+        }
+        for (DependencyInfo dependency : dependencies.dependencies()) {
+            showMessage("• " + dependency.groupId() + ":" + dependency.artifactId()
+                    + dependency.version().map(version -> ":" + version).orElse("")
+                    + dependency.scope().map(scope -> " (" + scope + ")").orElse(""),
+                    "text-primary");
+        }
+    }
+
+    /** Renders main-class candidates without guessing a winner. */
+    private void showMainCandidates(MainClassCandidates mains) {
+        if (mains.candidates().isEmpty()) {
+            showMessage("No main-method candidates found in the project sources.", "label-subtle");
+            return;
+        }
+        for (MainClassCandidates.Candidate candidate : mains.candidates()) {
+            showMessage("• " + candidate.className() + " — " + candidate.signature(),
+                    "text-primary");
+            showMessage("    " + candidate.path(), "label-subtle");
+        }
+    }
+
+    /** Renders TODO/FIXME findings with location and bounded snippet. */
+    private void showTodoFindings(TodoFindings todos) {
+        if (todos.findings().isEmpty()) {
+            showMessage("No TODO or FIXME markers found in the project sources.", "label-subtle");
+            return;
+        }
+        for (TodoFinding finding : todos.findings()) {
+            showMessage("• [" + finding.marker() + "] " + finding.path() + ":"
+                    + finding.lineNumber(), "text-primary");
+            finding.snippet().ifPresent(snippet -> showMessage("    " + snippet, "label-subtle"));
+        }
+        if (todos.truncated()) {
+            showMessage("(findings truncated at "
+                    + ProjectInspectionService.MAX_TODO_FINDINGS + " entries)", "label-warning");
         }
     }
 

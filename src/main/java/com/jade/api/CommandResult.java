@@ -14,5 +14,11 @@ public sealed interface CommandResult permits
         CancellationReceipt,
         ProjectContext,
         ProjectOperationResult,
-        ProjectOutcomeReport {
+        ProjectOutcomeReport,
+        ProjectInspectionResult,
+        ProjectInspectionResult.SourceInventory,
+        ProjectTree,
+        DependencyList,
+        TodoFindings,
+        MainClassCandidates {
 }

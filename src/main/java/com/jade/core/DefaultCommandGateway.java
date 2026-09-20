@@ -21,12 +21,18 @@ import com.jade.api.FileSearchQuery;
 import com.jade.api.FileSearchResult;
 import com.jade.api.FileSearchService;
 import com.jade.api.ProjectContext;
+import com.jade.api.ProjectInspectionResult;
+import com.jade.api.ProjectInspectionService;
 import com.jade.api.ProjectOperation;
 import com.jade.api.ProjectOperationResult;
 import com.jade.api.ProjectOperationStatus;
 import com.jade.api.ProjectOutcomeReport;
 import com.jade.api.ProjectProcessRunner;
 import com.jade.api.ProjectService;
+import com.jade.api.ProjectTree;
+import com.jade.api.DependencyList;
+import com.jade.api.MainClassCandidates;
+import com.jade.api.TodoFindings;
 import com.jade.api.SelectedFileResult;
 import com.jade.api.HistoryEntry;
 import com.jade.api.HistoryRepository;
@@ -52,6 +58,7 @@ import com.jade.services.files.ExtractionStatus;
 import com.jade.services.files.FileService;
 import com.jade.services.files.FileSystemFileService;
 import com.jade.services.project.FileSystemProjectService;
+import com.jade.services.project.MavenProjectInspectionService;
 import com.jade.services.project.MavenProjectProcessRunner;
 
 import java.io.IOException;
@@ -109,6 +116,7 @@ public final class DefaultCommandGateway implements CommandGateway {
     private final FileOpener fileOpener;
     private final ProjectService projectService;
     private final ProjectProcessRunner projectProcessRunner;
+    private final ProjectInspectionService projectInspectionService;
     private final SessionState sessionState = new SessionState();
     /** Guard for the bounded, ordered context/confirmation state machine. */
     private final Object stateLock = new Object();
@@ -201,6 +209,7 @@ public final class DefaultCommandGateway implements CommandGateway {
         this.fileOpener = java.util.Objects.requireNonNull(fileOpener, "fileOpener");
         this.projectService = java.util.Objects.requireNonNull(projectService, "projectService");
         this.projectProcessRunner = java.util.Objects.requireNonNull(projectProcessRunner, "projectProcessRunner");
+        this.projectInspectionService = new MavenProjectInspectionService();
         if (mutationService != null && scopeRoots.isEmpty()) {
             throw new IllegalArgumentException("mutation support requires at least one scope root");
         }
@@ -342,6 +351,26 @@ public final class DefaultCommandGateway implements CommandGateway {
         }
         if (plan instanceof CommandPlan.LastProjectOutcome) {
             return lastProjectOutcome();
+        }
+        if (plan instanceof CommandPlan.InspectProject) {
+            return projectInspectionService.inspect(requireActiveProject());
+        }
+        if (plan instanceof CommandPlan.ProjectStructure) {
+            return projectInspectionService.inspect(requireActiveProject()).tree();
+        }
+        if (plan instanceof CommandPlan.ProjectSourceCounts) {
+            return projectInspectionService.inspect(requireActiveProject()).sources();
+        }
+        if (plan instanceof CommandPlan.ProjectDependencies) {
+            return new DependencyList(
+                    projectInspectionService.inspect(requireActiveProject()).dependencies());
+        }
+        if (plan instanceof CommandPlan.ProjectMainCandidates) {
+            return projectInspectionService.inspect(requireActiveProject()).mainCandidates();
+        }
+        if (plan instanceof CommandPlan.ProjectTodos) {
+            ProjectInspectionResult inspection = projectInspectionService.inspect(requireActiveProject());
+            return new TodoFindings(inspection.todoFindings(), inspection.todosTruncated());
         }
         if (plan instanceof CommandPlan.FileMutation mutation) {
             return executeMutation(mutation, cancellation, requestId, onProgress);
@@ -1069,6 +1098,37 @@ public final class DefaultCommandGateway implements CommandGateway {
         }
         if (result instanceof SystemSnapshot) {
             return "System status captured";
+        }
+        if (result instanceof ProjectInspectionResult inspection) {
+            return "Project inspected: " + inspection.coordinates().artifactId()
+                    + ", " + inspection.sources().javaSourceFiles() + " source file(s), "
+                    + inspection.sources().javaTestFiles() + " test file(s), "
+                    + inspection.dependencies().size() + " declared dependenc(y/ies), "
+                    + inspection.todoFindings().size() + " TODO/FIXME marker(s)";
+        }
+        if (result instanceof ProjectTree tree) {
+            return "Project structure: " + tree.lines().size() + " entr(y/ies)"
+                    + (tree.truncated() ? " (truncated)" : "");
+        }
+        if (result instanceof ProjectInspectionResult.SourceInventory sources) {
+            return sources.javaSourceFiles() + " Java source file(s), "
+                    + sources.javaTestFiles() + " test file(s), "
+                    + sources.resourceFiles() + " other file(s) in "
+                    + sources.packages() + " package(s)";
+        }
+        if (result instanceof DependencyList dependencies) {
+            return "Declared dependencies: " + dependencies.dependencies().size();
+        }
+        if (result instanceof MainClassCandidates mains) {
+            return mains.candidates().isEmpty() ? "No main-class candidates found"
+                    : mains.candidates().size() == 1
+                            ? "Main class candidate: " + mains.candidates().getFirst().className()
+                            : mains.candidates().size() + " main-class candidates found";
+        }
+        if (result instanceof TodoFindings todos) {
+            return todos.findings().isEmpty() ? "No TODO/FIXME markers found"
+                    : "TODO/FIXME markers found: " + todos.findings().size()
+                            + (todos.truncated() ? " (list truncated)" : "");
         }
         return "Command history loaded";
     }
