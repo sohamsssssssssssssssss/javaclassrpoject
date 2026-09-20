@@ -220,6 +220,14 @@ public final class CommandParser {
                         && (words.get(2).equals("errors") || words.get(2).equals("failures")))) {
             return new CommandPlan.ProjectDiagnostics();
         }
+        // "what's the main class" / "whats the main class" — the contracted
+        // form tokenizes as a single first word, so this lives in the
+        // default-branch phrase parser rather than the "what" case.
+        if (words.size() == 4 && (words.get(0).equals("what's") || words.get(0).equals("whats"))
+                && words.get(1).equals("the") && words.get(2).equals("main")
+                && words.get(3).equals("class")) {
+            return new CommandPlan.ProjectMainCandidates();
+        }
         // "show me the project structure" / "show the project structure" / "show project structure"
         if ((words.size() == 5 && words.get(0).equals("show") && words.get(1).equals("me")
                 && words.get(2).equals("the") && words.get(3).equals("project")
@@ -356,6 +364,9 @@ public final class CommandParser {
                 && words.get(3).equals("main") && words.get(4).equals("class")) {
             return new CommandPlan.ProjectMainCandidates();
         }
+        // "what's the main class" is handled in the default-branch phrase
+        // parser below, because the contracted form tokenizes as one word
+        // and never reaches this "what"-prefixed switch case.
         // "what are the todos" / "what are the todos in this project"
         if (words.size() == 4 && words.get(1).equals("are") && words.get(2).equals("the")
                 && words.get(3).equals("todos")) {
