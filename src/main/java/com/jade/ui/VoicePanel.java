@@ -3,9 +3,6 @@ package com.jade.ui;
 import com.jade.services.audio.SpeakerIdentity;
 import com.jade.services.audio.VoiceState;
 
-import javafx.animation.Animation;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
@@ -13,13 +10,12 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.util.Duration;
 
 import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * The voice experience strip: start button, live equalizer while listening,
+ * The voice experience strip: start button, static listening indicator,
  * the IDLE/LISTENING/PROCESSING/EXECUTING/SPEAKING/ERROR state, the last
  * recognized transcript, and the identified speaker. Added alongside the
  * existing layout without redesigning it. All updates arrive from the voice
@@ -34,8 +30,6 @@ public final class VoicePanel extends HBox {
     private final Label transcriptLabel = new Label("");
     private final Label speakerLabel = new Label("");
     private final Region[] equalizerBars = new Region[EQUALIZER_BARS];
-    private final Timeline listeningTimeline;
-    private final Timeline speakingTimeline;
     private final Button startButton = new Button("Start voice");
 
     private volatile Consumer<VoiceState> externalStateConsumer;
@@ -65,7 +59,14 @@ public final class VoicePanel extends HBox {
         speakerLabel.setManaged(false);
         HBox.setHgrow(transcriptLabel, Priority.ALWAYS);
 
-        startButton.getStyleClass().add("button-secondary");
+        startButton.getStyleClass().add("microphone-button");
+        javafx.scene.shape.SVGPath microphone = new javafx.scene.shape.SVGPath();
+        microphone.setContent("M8 1 C6.3 1 5 2.3 5 4 V9 C5 10.7 6.3 12 8 12 C9.7 12 11 10.7 11 9 V4 C11 2.3 9.7 1 8 1 Z M2 7 V9 C2 12.3 4.7 15 8 15 C11.3 15 14 12.3 14 9 V7 M8 15 V19 M4 19 H12");
+        microphone.getStyleClass().add("microphone-icon");
+        startButton.setText("");
+        startButton.setGraphic(microphone);
+        startButton.setAccessibleText("Start voice session");
+        startButton.setTooltip(new javafx.scene.control.Tooltip("Start voice session"));
         startButton.setDisable(false);
         startButton.setOnAction(ignored -> { /* wired by the app via onStart */ });
 
@@ -73,30 +74,20 @@ public final class VoicePanel extends HBox {
         setPadding(new Insets(8, 0, 0, 0));
         getChildren().addAll(startButton, equalizer, stateLabel, transcriptLabel, speakerLabel);
 
-        // Equalizer: randomized bar levels on one steady tick while listening.
-        listeningTimeline = new Timeline(new KeyFrame(Duration.millis(140), event -> {
-            for (Region bar : equalizerBars) {
-                double level = 0.3 + 0.7 * Math.random();
-                bar.setScaleY(level);
-                bar.setOpacity(0.35 + 0.65 * level);
-            }
-        }));
-        listeningTimeline.setCycleCount(Animation.INDEFINITE);
-
-        // Speaking pulse: gentle opacity breathing on the whole strip.
-        speakingTimeline = new Timeline(
-                new KeyFrame(Duration.millis(0), event -> setOpacity(1.0)),
-                new KeyFrame(Duration.millis(300), event -> setOpacity(0.72)),
-                new KeyFrame(Duration.millis(600), event -> setOpacity(1.0)));
-        speakingTimeline.setCycleCount(Animation.INDEFINITE);
-
         stateConsumer = state -> Platform.runLater(() -> {
             if (state == null) {
-                stateLabel.setText("Voice unavailable (STT model not installed)");
+                stateLabel.setText("Voice unavailable");
+                setVisible(false);
+                setManaged(false);
+                startButton.setTooltip(new javafx.scene.control.Tooltip("Voice unavailable · speech model not installed"));
                 startButton.setDisable(true);
-                stopAnimations();
+                animateFor(VoiceState.IDLE);
+                Consumer<VoiceState> external = externalStateConsumer;
+                if (external != null) external.accept(null);
                 return;
             }
+            setVisible(state != VoiceState.IDLE);
+            setManaged(state != VoiceState.IDLE);
             stateLabel.setText(state.toString());
             stateLabel.getStyleClass().removeIf(c -> c.startsWith("voice-state-"));
             stateLabel.getStyleClass().add("voice-state-" + state.toString().toLowerCase(java.util.Locale.ROOT));
@@ -127,36 +118,16 @@ public final class VoicePanel extends HBox {
         });
     }
 
-    /** Starts or stops the equalizer / speaking animations for the state. */
-    private void animateFor(VoiceState state) {
-        boolean listening = state == VoiceState.LISTENING;
-        boolean speaking = state == VoiceState.SPEAKING;
-        if (listening && listeningTimeline.getStatus() != Animation.Status.RUNNING) {
-            listeningTimeline.playFromStart();
-        } else if (!listening) {
-            listeningTimeline.stop();
-            for (Region bar : equalizerBars) {
-                bar.setScaleY(1.0);
-                bar.setOpacity(0.25);
-            }
-        }
-        if (speaking) {
-            if (speakingTimeline.getStatus() != Animation.Status.RUNNING) {
-                speakingTimeline.playFromStart();
-            }
-            getStyleClass().add("voice-speaking");
-        } else {
-            speakingTimeline.stop();
-            setOpacity(1.0);
-            getStyleClass().remove("voice-speaking");
-        }
+    public Button detachMicrophone() {
+        getChildren().remove(startButton);
+        return startButton;
     }
 
-    private void stopAnimations() {
-        listeningTimeline.stop();
-        speakingTimeline.stop();
-        setOpacity(1.0);
+    /** Static indicators only: microphone levels are not available, so none are fabricated. */
+    private void animateFor(VoiceState state) {
+        for (Region bar : equalizerBars) bar.setOpacity(state == VoiceState.LISTENING ? 0.8 : 0.25);
         getStyleClass().remove("voice-speaking");
+        if (state == VoiceState.SPEAKING) getStyleClass().add("voice-speaking");
     }
 
     /** Subscribes an additional observer of voice states (used by tests). */

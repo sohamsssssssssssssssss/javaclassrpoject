@@ -22,6 +22,7 @@ import com.jade.services.history.SqliteHistoryRepository;
 import com.jade.services.search.FileSystemFileSearchService;
 import com.jade.services.system.OshiSystemInfoService;
 import com.jade.ui.CommandUI;
+import com.jade.ui.CommandCenterUI;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -59,6 +60,7 @@ public final class JadeApplication extends Application {
     private VoiceCommandController voiceController;
     private com.jade.ui.ProjectCenterPanel projectCenterPanel;
     private com.jade.ui.SystemActivityPanel systemActivityPanel;
+    private CommandCenterUI center;
 
     @Override
     public void start(Stage stage) {
@@ -125,17 +127,20 @@ public final class JadeApplication extends Application {
             commandUI.setSearchScope(configuration.scopeDescription());
             com.jade.ui.ExecutionBrainPanel brain = new com.jade.ui.ExecutionBrainPanel();
             commandUI.setExecutionBrain(brain);
-            commandUI.setVoicePanel(buildVoiceStack(configuration));
+            com.jade.ui.VoicePanel voicePanel = buildVoiceStack(configuration);
+            commandUI.setVoicePanel(voicePanel);
             com.jade.ui.ProjectCenterPanel projectPanel = new com.jade.ui.ProjectCenterPanel(gateway, message -> { });
             com.jade.ui.SystemActivityPanel systemPanel = new com.jade.ui.SystemActivityPanel(gateway);
             systemPanel.setCapabilities("Search scope: " + configuration.scopeDescription());
             this.projectCenterPanel = projectPanel;
             this.systemActivityPanel = systemPanel;
-            com.jade.ui.CommandCenterUI center = new com.jade.ui.CommandCenterUI(commandUI, projectPanel, systemPanel);
-            Scene scene = new Scene(center, 980, 700);
+            center = new CommandCenterUI(commandUI, projectPanel, systemPanel);
+            center.setVoiceAvailable(voiceController != null);
+            voicePanel.onExternalState(center::onVoiceState);
+            Scene scene = new Scene(center, 1440, 900);
             applyStyles(scene);
-            stage.setMinWidth(640);
-            stage.setMinHeight(440);
+            stage.setMinWidth(1000);
+            stage.setMinHeight(680);
             stage.setScene(scene);
             stage.show();
         } catch (RuntimeException e) {
@@ -345,6 +350,10 @@ public final class JadeApplication extends Application {
     }
 
     private void closeRuntime() {
+        if (center != null) {
+            center.close();
+            center = null;
+        }
         closeVoiceStack();
         if (commandUI != null) {
             commandUI.close();

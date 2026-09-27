@@ -66,7 +66,7 @@ public final class SystemActivityPanel extends VBox {
 
         ScrollPane systemScroll = new ScrollPane(systemBox);
         systemScroll.setFitToWidth(true);
-        systemScroll.setPrefHeight(190);
+        systemScroll.setPrefHeight(430);
         systemScroll.getStyleClass().add("center-scroll");
 
         ScrollPane timelineScroll = new ScrollPane(timelineBox);
@@ -146,17 +146,7 @@ public final class SystemActivityPanel extends VBox {
     }
 
     private void renderSystem(SystemSnapshot snapshot) {
-        HBox row1 = new HBox(8,
-                metricCard("OS", snapshot.osName() + " " + snapshot.osVersion()),
-                metricCard("ARCHITECTURE", snapshot.architecture()));
-        HBox row2 = new HBox(8,
-                metricCard("CPU LOAD", snapshot.cpuLoadPercent().isPresent()
-                        ? String.format("%.1f%%", snapshot.cpuLoadPercent().getAsDouble())
-                        : "Unavailable"),
-                metricCard("MEMORY AVAILABLE", SystemActivityPanel.bytes(snapshot.availableMemoryBytes())),
-                metricCard("MEMORY TOTAL", SystemActivityPanel.bytes(snapshot.totalMemoryBytes())));
-        systemBox.getChildren().setAll(row1, row2,
-                subtle("Captured " + TIME_FORMAT.format(snapshot.capturedAt())));
+        systemBox.getChildren().setAll(SystemResultView.create(snapshot));
     }
 
     /** Renders the bounded history as an operation timeline. */
@@ -190,28 +180,6 @@ public final class SystemActivityPanel extends VBox {
             rows.add(line);
         }
         timelineBox.getChildren().setAll(rows);
-    }
-
-    private static String bytes(java.util.OptionalLong value) {
-        return value.isPresent() ? format(value.getAsLong()) : "Unavailable";
-    }
-
-    private static String format(long bytes) {
-        if (bytes < 1_024) return bytes + " B";
-        if (bytes < 1_048_576) return String.format("%.1f KiB", bytes / 1_024.0);
-        if (bytes < 1_073_741_824L) return String.format("%.1f MiB", bytes / 1_048_576.0);
-        return String.format("%.1f GiB", bytes / 1_073_741_824.0);
-    }
-
-    private static Node metricCard(String term, String value) {
-        Label termLabel = new Label(term);
-        termLabel.getStyleClass().add("metric-term");
-        Label valueLabel = new Label(value);
-        valueLabel.getStyleClass().add("metric-value");
-        valueLabel.setWrapText(true);
-        VBox card = new VBox(2, termLabel, valueLabel);
-        card.getStyleClass().add("metric-card");
-        return card;
     }
 
     private static Label subtle(String text) {

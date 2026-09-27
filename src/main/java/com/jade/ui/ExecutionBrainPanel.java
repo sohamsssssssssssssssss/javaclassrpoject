@@ -25,13 +25,13 @@ public final class ExecutionBrainPanel extends HBox {
 
     private final ExecutionStageModel model = new ExecutionStageModel();
     private final Label[] pills;
+    private final HBox pillRow = new HBox(6);
     private final Label statusLabel = new Label("Idle — enter a command");
     private final Label planBadge = new Label("multi-step plan");
 
     public ExecutionBrainPanel() {
         ExecutionStageModel.BrainStage[] stages = ExecutionStageModel.BrainStage.values();
         pills = new Label[stages.length];
-        HBox pillRow = new HBox(6);
         for (int index = 0; index < stages.length; index += 1) {
             if (index > 0) {
                 Region arrow = new Region();
@@ -54,6 +54,9 @@ public final class ExecutionBrainPanel extends HBox {
         setPadding(new Insets(8, 0, 2, 0));
         getChildren().addAll(pillRow, planBadge, statusLabel);
         HBox.setHgrow(statusLabel, javafx.scene.layout.Priority.ALWAYS);
+        getStyleClass().add("execution-pipeline");
+        setVisible(false);
+        setManaged(false);
         render();
     }
 
@@ -77,9 +80,12 @@ public final class ExecutionBrainPanel extends HBox {
             return;
         }
         onFxThread(() -> {
+            getStyleClass().add("pipeline-complete");
+            pillRow.setVisible(false);
+            pillRow.setManaged(false);
             model.onComplete(outcome.status());
             statusLabel.setText(switch (outcome.status()) {
-                case SUCCEEDED -> "✓ Done — " + outcome.summary();
+                case SUCCEEDED -> "✓ " + outcome.summary();
                 case FAILED -> "✗ Failed — " + outcome.summary();
                 case REJECTED -> "⊘ Rejected — " + outcome.summary();
                 case CANCELLED -> "– Cancelled";
@@ -100,6 +106,11 @@ public final class ExecutionBrainPanel extends HBox {
     /** Resets the strip for a newly submitted command. */
     public void resetForNewCommand() {
         onFxThread(() -> {
+            setVisible(true);
+            setManaged(true);
+            getStyleClass().remove("pipeline-complete");
+            pillRow.setVisible(true);
+            pillRow.setManaged(true);
             model.reset();
             planBadge.setManaged(false);
             planBadge.setVisible(false);

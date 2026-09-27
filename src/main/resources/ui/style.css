@@ -1,198 +1,148 @@
-.root-pane {
-    -fx-background-color: #0a0a2e;
-    -fx-font-family: system;
+/* Native V1.1 theme. Radii: 6 controls, 12 surfaces, 999 pills. */
+.root {
+    -jade-canvas: #0b111b;
+    -jade-surface: #111c29;
+    -jade-raised: #172433;
+    -jade-border: #253544;
+    -jade-text: #e4edf3;
+    -jade-muted: #a0b0bf;
+    -jade-accent: #8dc9dc;
+    -jade-success: #7dc8a4;
+    -jade-warning: #d9b57a;
+    -jade-error: #d99099;
+    -fx-background-color: -jade-canvas;
+    -fx-font-family: "System";
     -fx-font-size: 14px;
+    -fx-accent: -jade-accent;
+    -fx-focus-color: -jade-accent;
+    -fx-faint-focus-color: transparent;
 }
+.label { -fx-text-fill: -jade-text; }
+.root-pane, .command-center, .main-workspace { -fx-background-color: -jade-canvas; }
+.shell-header { -fx-padding: 16 28; -fx-border-color: transparent transparent -jade-border transparent; }
+.shell-brand { -fx-font-size: 23px; -fx-font-weight: bold; }
+.shell-subtitle { -fx-text-fill: -jade-muted; -fx-font-size: 11px; }
+.status-chip { -fx-text-fill: -jade-muted; -fx-font-size: 12px; -fx-padding: 4 6; }
+.status-accent { -fx-text-fill: -jade-accent; }
+.status-error { -fx-text-fill: -jade-error; }
+.status-success { -fx-text-fill: -jade-success; -fx-font-size: 12px; -fx-padding: 5 0; }
+.navigation-rail { -fx-padding: 28 12; -fx-pref-width: 120; -fx-min-width: 120; -fx-max-width: 120; }
+.navigation-button { -fx-background-color: transparent; -fx-text-fill: -jade-muted; -fx-font-size: 14px; -fx-alignment: center-left; -fx-padding: 12 10; -fx-background-radius: 6; -fx-border-radius: 6; -fx-cursor: hand; }
+.navigation-button:hover { -fx-background-color: -jade-surface; -fx-text-fill: -jade-text; }
+.navigation-active { -fx-text-fill: -jade-accent; -fx-background-color: -jade-surface; -fx-border-color: transparent transparent transparent -jade-accent; -fx-border-width: 0 0 0 2; }
+.navigation-button:focused { -fx-border-color: -jade-accent; -fx-border-width: 1; }
+.motion-toggle { -fx-text-fill: -jade-muted; -fx-font-size: 12px; -fx-padding: 6 8; }
+.check-box .box { -fx-background-color: -jade-surface; -fx-border-color: -jade-border; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 4; }
+.check-box:selected .mark { -fx-background-color: -jade-accent; }
+.check-box:focused .box { -fx-border-color: -jade-accent; }
+.home-stage { -fx-padding: 12 0; }
+.core-stage { -fx-background-color: transparent; -fx-border-color: transparent; }
+.core-ring-outer { -fx-fill: transparent; -fx-stroke: #2b4355; -fx-stroke-width: 0.8; }
+.core-ring { -fx-fill: transparent; -fx-stroke: #213747; -fx-stroke-width: 0.6; }
+.core-arc { -fx-stroke: #3c6378; -fx-stroke-width: 1.4; -fx-opacity: 0.7; }
+.core-segment-active { -fx-stroke: -jade-accent; -fx-stroke-width: 2.2; -fx-opacity: 1; }
+.core-dot { -fx-fill: #73a8bc; }
+.core-center { -fx-fill: radial-gradient(center 35% 30%, radius 75%, #d2eef2, #6caabd); -fx-effect: dropshadow(gaussian, rgba(115,185,204,0.22), 14, 0.15, 0, 0); }
+.core-pulse { -fx-stroke: -jade-accent; -fx-stroke-width: 1.6; }
+.core-state-listening .core-ring-outer { -fx-stroke: #679bac; -fx-stroke-width: 1.4; }
+.core-state-processing .core-ring { -fx-stroke: #4c7a8d; }
+.core-state-executing .core-segment-active { -fx-stroke-width: 3.5; }
+.core-state-speaking .core-center { -fx-fill: #c4eee1; -fx-effect: dropshadow(gaussian, rgba(125,200,164,0.35), 18, 0.2, 0, 0); }
+.core-state-error .core-arc, .core-state-error .core-ring-outer { -fx-stroke: -jade-error; }
+.core-state-error .core-center { -fx-fill: -jade-error; -fx-effect: null; }
+.core-state-label { -fx-text-fill: -jade-muted; -fx-font-size: 12px; -fx-font-weight: bold; }
+.interaction-prompt { -fx-font-size: 26px; -fx-text-fill: -jade-text; }
+.home-focused { -fx-padding: 0; -fx-spacing: 10; }
+.home-focused .core-state-label { -fx-font-size: 12px; }
+.command-dock { -fx-padding: 12 0 18 0; }
+.command-bar { -fx-padding: 0; }
+.command-surface { -fx-background-color: -jade-surface; -fx-background-radius: 12; -fx-border-color: -jade-border; -fx-border-radius: 12; -fx-padding: 9 12; }
+.text-field { -fx-background-color: -jade-surface; -fx-text-fill: -jade-text; -fx-prompt-text-fill: -jade-muted; -fx-border-color: -jade-border; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10 12; }
+.command-surface .text-field { -fx-background-color: transparent; -fx-border-color: transparent; -fx-font-size: 15px; -fx-padding: 6 4; }
+.command-surface .text-field:focused { -fx-border-color: transparent transparent -jade-accent transparent; -fx-border-width: 0 0 1 0; }
+.command-submit, .microphone-button { -fx-background-color: transparent; -fx-text-fill: -jade-muted; -fx-font-size: 21px; -fx-padding: 3 10; -fx-background-radius: 6; -fx-border-radius: 6; }
+.command-submit:hover, .microphone-button:hover { -fx-background-color: -jade-raised; -fx-text-fill: -jade-text; }
+.command-submit:focused, .microphone-button:focused { -fx-border-color: -jade-accent; }
+.command-submit:disabled, .microphone-button:disabled { -fx-opacity: 0.4; }
+.scope-context { -fx-padding: 0 4; }
+.scope-caption { -fx-font-size: 11px; -fx-text-fill: -jade-muted; }
+.scope-path { -fx-font-family: "Monospaced"; -fx-font-size: 12px; -fx-text-fill: -jade-muted; }
+.suggestion-chip, .button-mini, .button-secondary { -fx-background-color: transparent; -fx-border-color: -jade-border; -fx-border-radius: 999; -fx-background-radius: 999; -fx-text-fill: -jade-muted; -fx-padding: 7 14; -fx-font-size: 12px; -fx-cursor: hand; }
+.suggestion-chip:hover, .button-mini:hover, .button-secondary:hover { -fx-background-color: -jade-surface; -fx-text-fill: -jade-text; }
+.suggestion-chip:focused, .button-mini:focused, .button-secondary:focused { -fx-border-color: -jade-accent; }
+.button-primary { -fx-background-color: -jade-raised; -fx-text-fill: -jade-accent; -fx-background-radius: 6; -fx-padding: 8 14; }
+.button-primary:focused { -fx-border-color: -jade-accent; -fx-border-radius: 6; }
+.result-heading { -fx-font-size: 26px; -fx-font-weight: bold; }
+.result-eyebrow, .metric-term { -fx-font-size: 11px; -fx-text-fill: -jade-muted; -fx-font-weight: bold; }
+.result-metadata { -fx-text-fill: -jade-muted; -fx-font-size: 13px; }
+.system-result { -fx-background-color: transparent; -fx-padding: 6 0 12 0; }
+.system-result .result-heading { -fx-font-size: 30px; }
+.system-identity { -fx-padding: 18 0 0 0; -fx-border-color: -jade-border transparent transparent transparent; -fx-border-width: 1 0 0 0; }
+.system-result .metric-value { -fx-font-size: 19px; }
+.system-reading { -fx-padding: 8 0 0 0; }
+.system-result .progress-value { -fx-font-family: "System"; -fx-font-size: 38px; -fx-font-weight: bold; }
+.metric-card { -fx-background-color: -jade-raised; -fx-background-radius: 12; -fx-padding: 18 20; }
+.metric-value { -fx-font-size: 21px; -fx-font-weight: bold; }
+.progress-value { -fx-font-family: "Monospaced"; -fx-font-size: 20px; }
+.metric-progress { -fx-pref-height: 6; -fx-min-height: 6; -fx-max-height: 6; }
+.progress-bar { -fx-accent: -jade-accent; }
+.progress-bar > .track { -fx-background-color: -jade-border; -fx-background-radius: 999; }
+.progress-bar > .bar { -fx-background-color: -jade-accent; -fx-background-radius: 999; -fx-background-insets: 0; -fx-padding: 3; }
+.result-card, .empty-state { -fx-background-color: -jade-surface; -fx-background-radius: 12; -fx-padding: 18; }
+.empty-state { -fx-text-fill: -jade-muted; }
+.placeholder-stage { -fx-padding: 32 12; -fx-alignment: top-left; }
+.section-title { -fx-font-weight: bold; -fx-padding: 8 0 0 0; }
+.tab-title { -fx-font-size: 17px; -fx-font-weight: bold; }
+.text-primary { -fx-text-fill: -jade-text; }
+.text-accent { -fx-text-fill: -jade-accent; -fx-font-weight: bold; }
+.label-subtle { -fx-text-fill: -jade-muted; }
+.label-warning { -fx-text-fill: -jade-error; }
+.execution-pipeline { -fx-padding: 8 4; }
+.stage-pill { -fx-background-color: -jade-surface; -fx-background-radius: 999; -fx-text-fill: -jade-muted; -fx-font-size: 9px; -fx-padding: 3 8; }
+.stage-pill.stage-active { -fx-background-color: -jade-raised; -fx-text-fill: -jade-accent; }
+.stage-pill.stage-done { -fx-text-fill: -jade-success; }
+.stage-pill.stage-skipped { -fx-text-fill: -jade-muted; }
+.pipeline-complete .stage-pill { -fx-background-color: transparent; -fx-font-size: 8px; -fx-padding: 2 5; }
+.pipeline-complete .label-subtle { -fx-font-size: 11px; }
+.brain-arrow { -fx-background-color: -jade-border; -fx-min-width: 6; -fx-max-width: 6; -fx-min-height: 1; -fx-max-height: 1; }
+.plan-badge, .dep-chip, .speaker-chip { -fx-background-color: -jade-raised; -fx-background-radius: 999; -fx-text-fill: -jade-accent; -fx-font-size: 11px; -fx-padding: 4 10; }
+.eq-bar { -fx-background-color: -jade-accent; -fx-background-radius: 6; }
+.voice-state-listening, .voice-state-processing, .voice-state-executing { -fx-text-fill: -jade-accent; }
+.voice-state-speaking { -fx-text-fill: -jade-success; }
+.voice-state-error { -fx-text-fill: -jade-error; }
+.scroll-pane, .scroll-pane > .viewport, .center-scroll, .center-scroll > .viewport { -fx-background-color: transparent; }
+.scroll-bar { -fx-background-color: transparent; -fx-pref-width: 8; }
+.scroll-bar .thumb { -fx-background-color: -jade-border; -fx-background-radius: 999; }
+.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-padding: 0; }
+.structure-tree, .structure-tree > .virtual-flow { -fx-background-color: transparent; }
+.structure-tree .tree-cell { -fx-text-fill: -jade-text; -fx-background-color: transparent; -fx-font-family: "Monospaced"; -fx-font-size: 12px; }
+.structure-tree .tree-cell:selected { -fx-background-color: -jade-raised; }
+.tooltip { -fx-background-color: -jade-raised; -fx-text-fill: -jade-text; -fx-font-size: 12px; }
 
-/* ── Command center shell ─────────────────────────────────────────── */
-.command-center > .tab-header-area {
-    -fx-background-color: #0d0d36;
-    -fx-padding: 4 12 0 12;
-}
-.command-center > .tab-header-area .tab {
-    -fx-background-color: transparent;
-    -fx-padding: 6 16 6 16;
-}
-.command-center > .tab-header-area .tab .tab-label {
-    -fx-text-fill: #a8a8b8;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-}
-.command-center > .tab-header-area .tab:selected .tab-label {
-    -fx-text-fill: #0fbcef;
-}
-.command-center > .tab-header-area .tab:selected {
-    -fx-border-color: transparent transparent #0fbcef transparent;
-    -fx-border-width: 0 0 2 0;
-}
-.command-center .tab-content-area {
-    -fx-background-color: #0a0a2e;
-}
-.tab-title {
-    -fx-text-fill: #0fbcef;
-    -fx-font-size: 13px;
-    -fx-font-weight: bold;
-}
-.section-title {
-    -fx-text-fill: #f1f1f1;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-padding: 8 0 0 0;
-}
-.center-scroll, .center-scroll > .viewport {
-    -fx-background-color: transparent;
-}
+.root-pane .execution-pipeline { -fx-padding: 20 0; }
+.root-pane .execution-pipeline .stage-pill { -fx-font-size: 11px; -fx-padding: 6 10; }
 
-/* ── Metric cards, chips, result cards, empty states ──────────────── */
-.metric-card {
-    -fx-background-color: #16213e;
-    -fx-background-radius: 7;
-    -fx-padding: 8 12 8 12;
-}
-.metric-term {
-    -fx-text-fill: #8b8b9e;
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-}
-.metric-value {
-    -fx-text-fill: #f1f1f1;
-    -fx-font-size: 15px;
-    -fx-font-weight: bold;
-}
-.dep-chip {
-    -fx-background-color: #1b2a4a;
-    -fx-background-radius: 20;
-    -fx-padding: 4 10 4 10;
-    -fx-text-fill: #cfe6f7;
-    -fx-font-size: 12px;
-}
-.dep-chip .tooltip {
-    -fx-background-color: #16213e;
-    -fx-text-fill: #f1f1f1;
-}
-.result-card {
-    -fx-background-color: #12192f;
-    -fx-background-radius: 8;
-    -fx-border-color: #232f52;
-    -fx-border-radius: 8;
-    -fx-padding: 10;
-}
-.empty-state {
-    -fx-text-fill: #8b8b9e;
-    -fx-font-size: 13px;
-    -fx-background-color: #12192f;
-    -fx-background-radius: 8;
-    -fx-padding: 16;
-}
-.speaker-chip {
-    -fx-background-color: #1b2a4a;
-    -fx-background-radius: 20;
-    -fx-padding: 3 10 3 10;
-    -fx-text-fill: #0fbcef;
-    -fx-font-weight: bold;
-    -fx-font-size: 11px;
-}
+.files-stage { -fx-padding: 12 0; -fx-alignment: center-left; }
+.files-stage .result-heading { -fx-font-size: 30px; }
+.file-scope { -fx-padding: 20 0; -fx-border-color: -jade-border transparent -jade-border transparent; -fx-border-width: 1 0 1 0; }
+.microphone-icon { -fx-fill: transparent; -fx-stroke: -jade-muted; -fx-stroke-width: 1.4; }
+.microphone-button:hover .microphone-icon { -fx-stroke: -jade-text; }
+.pipeline-complete { -fx-padding: 6 4 0 4; }
+.pipeline-complete .label-subtle { -fx-font-size: 12px; }
 
-/* ── Execution brain (V3) ─────────────────────────────────────────── */
-.stage-pill {
-    -fx-background-color: #16213e;
-    -fx-background-radius: 20;
-    -fx-padding: 3 10 3 10;
-    -fx-text-fill: #8b8b9e;
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-}
-.stage-pill.stage-active {
-    -fx-background-color: #0fbcef;
-    -fx-text-fill: #0a0a2e;
-}
-.stage-pill.stage-done {
-    -fx-background-color: #126c43;
-    -fx-text-fill: #eafff4;
-}
-.stage-pill.stage-skipped {
-    -fx-background-color: #33405c;
-    -fx-text-fill: #8b8b9e;
-}
-.brain-arrow {
-    -fx-background-color: #5d6a7c;
-    -fx-min-width: 8;
-    -fx-max-width: 8;
-    -fx-min-height: 2;
-    -fx-max-height: 2;
-}
-.plan-badge {
-    -fx-background-color: #4b2a7a;
-    -fx-background-radius: 20;
-    -fx-padding: 3 10 3 10;
-    -fx-text-fill: #e6d9ff;
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-}
-
-/* ── Voice (V5) ───────────────────────────────────────────────────── */
-.eq-bar {
-    -fx-background-color: #0fbcef;
-    -fx-background-radius: 2;
-}
-.voice-speaking {
-    -fx-border-color: #0fbcef;
-    -fx-border-width: 0 0 0 2;
-}
-.voice-state-listening { -fx-text-fill: #0fbcef; -fx-font-weight: bold; }
-.voice-state-processing { -fx-text-fill: #ffd166; -fx-font-weight: bold; }
-.voice-state-executing { -fx-text-fill: #ffd166; -fx-font-weight: bold; }
-.voice-state-speaking { -fx-text-fill: #7bd88f; -fx-font-weight: bold; }
-.voice-state-error { -fx-text-fill: #ff7b8a; -fx-font-weight: bold; }
-
-/* ── Existing text styles (unchanged) ─────────────────────────────── */
-.text-field, .scroll-pane, .scroll-pane > .viewport {
-    -fx-background-color: #16213e;
-    -fx-text-fill: #f1f1f1;
-}
-
-.text-field {
-    -fx-prompt-text-fill: #8b8b9e;
-    -fx-border-color: #3a3a5a;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
-}
-
-.button-primary {
-    -fx-background-color: #0fbcef;
-    -fx-text-fill: #0a0a2e;
-    -fx-font-weight: bold;
-}
-
-.button-secondary {
-    -fx-background-color: transparent;
-    -fx-border-color: #e94d5f;
-    -fx-text-fill: #e94d5f;
-}
-
-.button-mini {
-    -fx-background-color: #1b2a4a;
-    -fx-text-fill: #0fbcef;
-    -fx-font-size: 11px;
-    -fx-padding: 2 10 2 10;
-}
-
-.text-primary { -fx-text-fill: #f1f1f1; }
-.text-accent { -fx-text-fill: #0fbcef; -fx-font-weight: bold; }
-.label-subtle { -fx-text-fill: #a8a8b8; }
-.label-warning { -fx-text-fill: #ff7b8a; }
-.progress-bar { -fx-accent: #0fbcef; }
-
-/* ── Structure tree (V2) ──────────────────────────────────────────── */
-.structure-tree, .structure-tree > .virtual-flow {
-    -fx-background-color: transparent;
-}
-.structure-tree .tree-cell {
-    -fx-text-fill: #cfe0f5;
-    -fx-font-size: 12px;
-    -fx-padding: 1 4 1 4;
-    -fx-background-color: transparent;
-}
-.structure-tree .tree-cell:selected {
-    -fx-background-color: #1b2a4a;
-}
+/* Final readability and static-state polish; same shared palette. */
+.command-submit:disabled { -fx-opacity: 0.65; }
+.destination-glyph { -fx-fill: transparent; -fx-stroke: -jade-muted; -fx-stroke-width: 1.2; -fx-stroke-line-cap: round; -fx-stroke-line-join: round; }
+.navigation-active .destination-glyph { -fx-stroke: -jade-accent; }
+.file-scope .scope-path { -fx-font-size: 13px; -fx-text-fill: -jade-text; }
+.file-scope { -fx-padding: 20 16; -fx-border-color: -jade-border transparent -jade-border -jade-accent; -fx-border-width: 1 0 1 2; }
+.core-compact .core-ring { -fx-stroke-width: 3; }
+.core-compact .core-ring-outer { -fx-stroke-width: 3; }
+.core-compact .core-arc { -fx-stroke-width: 5; }
+.core-compact .core-segment-active { -fx-stroke-width: 9; }
+.core-state-listening .core-segment-active { -fx-stroke-width: 4; }
+.core-state-processing .core-dot { -fx-fill: -jade-accent; }
+.core-state-processing .core-ring { -fx-stroke-width: 1.4; }
+.core-state-executing .core-segment-active { -fx-stroke-width: 5; }
+.core-state-speaking .core-ring { -fx-stroke: -jade-success; }
+.core-state-error .core-dot { -fx-fill: -jade-error; }

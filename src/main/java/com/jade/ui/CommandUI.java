@@ -7,21 +7,28 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
 import java.util.OptionalLong;
+import java.util.function.Consumer;
+import com.jade.services.audio.VoiceState;
+import com.jade.ui.shell.JadeShellModel;
 
 public final class CommandUI extends BorderPane implements AutoCloseable {
     private final CommandGateway gateway;
     private final boolean cancellable;
     private final TextField commandField = new TextField();
-    private final Button submitButton = new Button("Submit");
+    private final Button submitButton = new Button("↵");
     private final Button cancelButton = new Button("Cancel");
     private final Label statusLabel = new Label();
     private final ProgressBar progressBar = new ProgressBar();
     private final VBox results = new VBox(8);
     private VBox topBox;
+    private HBox commandRow;
+    private Runnable resultObserver = () -> { };
     private VoicePanel voicePanel;
     private com.jade.ui.ExecutionBrainPanel executionBrain;
     private final Label searchScopeLabel = new Label();
     private CommandSubscription currentSubscription;
+    private Consumer<VoiceState> stateObserver = ignored -> { };
+    private Consumer<String> projectObserver = ignored -> { };
 
     public CommandUI(CommandGateway gateway) {
         this(gateway, true);
@@ -35,15 +42,18 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
 
     private void buildView() {
         getStyleClass().add("root-pane");
-        setPadding(new Insets(16));
+        setPadding(Insets.EMPTY);
         setPrefSize(820, 620);
 
-        commandField.setPromptText("Try: find txt files, find PDFs larger than 20 MB, create folder called College, undo");
+        commandField.setPromptText("Ask JADE anything…");
+        commandField.setId("command-input");
         commandField.setAccessibleText("JADE command");
         commandField.setOnAction(ignored -> onSubmit());
         HBox.setHgrow(commandField, Priority.ALWAYS);
 
-        submitButton.getStyleClass().add("button-primary");
+        submitButton.getStyleClass().add("command-submit");
+        submitButton.setAccessibleText("Submit command (Enter)");
+        submitButton.setTooltip(new Tooltip("Submit · Enter"));
         submitButton.setDefaultButton(true);
         submitButton.setDisable(true);
         submitButton.setOnAction(ignored -> onSubmit());
@@ -56,18 +66,24 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         commandField.textProperty().addListener((ignored, oldValue, newValue) ->
                 submitButton.setDisable(currentSubscription != null || newValue == null || newValue.isBlank()));
 
-        HBox commandRow = new HBox(8, commandField, submitButton, cancelButton);
+        commandRow = new HBox(8, commandField, submitButton, cancelButton);
+        commandRow.getStyleClass().add("command-surface");
+        commandRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         VBox top = new VBox(8, commandRow, statusLabel, progressBar);
         topBox = top;
         top.setPadding(new Insets(0, 0, 12, 0));
+        statusLabel.getStyleClass().add("label-subtle");
+        statusLabel.setManaged(false);
+        statusLabel.setVisible(false);
         progressBar.setMaxWidth(Double.MAX_VALUE);
         progressBar.setVisible(false);
         progressBar.setManaged(false);
         setTop(top);
 
-        results.setPadding(new Insets(12));
+        results.setPadding(new Insets(8));
         showMessage("Enter a command to get started", "label-subtle");
         ScrollPane scroll = new ScrollPane(results);
+        scroll.getStyleClass().add("center-scroll");
         scroll.setFitToWidth(true);
         scroll.setPannable(true);
         setCenter(scroll);
@@ -83,7 +99,12 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             return;
         }
         setRunning(true);
+        results.getChildren().clear();
+        showMessage("Working on your request…", "result-heading");
+        stateObserver.accept(VoiceState.PROCESSING);
         if (executionBrain != null) {
+            topBox.getChildren().remove(executionBrain);
+            results.getChildren().add(executionBrain);
             executionBrain.resetForNewCommand();
         }
         currentSubscription = gateway.submit(
@@ -102,7 +123,10 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             executionBrain.onProgressEvent(event);
         }
         onFxThread(() -> {
+            stateObserver.accept(JadeShellModel.forProgress(event.stage()));
             statusLabel.setText(event.message());
+            statusLabel.setManaged(true);
+            statusLabel.setVisible(true);
             OptionalLong total = event.totalUnits();
             boolean measurable = total.isPresent() && total.getAsLong() > 0;
             progressBar.setProgress(measurable
@@ -117,6 +141,11 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         onFxThread(() -> {
             currentSubscription = null;
             setRunning(false);
+            stateObserver.accept(outcome.status() == CommandStatus.FAILED || outcome.status() == CommandStatus.REJECTED
+                    ? VoiceState.ERROR : VoiceState.IDLE);
+            if (outcome.result().orElse(null) instanceof com.jade.api.ProjectContext project) {
+                projectObserver.accept(project.name());
+            }
             if (executionBrain != null) {
                 if (outcome.result().orElse(null) instanceof com.jade.api.ExecutionResult) {
                     executionBrain.markMultiStepPlan();
@@ -124,14 +153,18 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
                 executionBrain.onOutcome(outcome);
             }
             results.getChildren().clear();
+            if (executionBrain != null) topBox.getChildren().add(executionBrain);
             switch (outcome.status()) {
                 case CANCELLED -> showMessage("Command cancelled", "label-subtle");
-                case REJECTED -> showMessage("Rejected: " + errorMessage(outcome), "label-warning");
-                case FAILED -> showMessage("Failed: " + errorMessage(outcome), "label-warning");
+                case REJECTED -> showError("Request rejected", errorMessage(outcome));
+                case FAILED -> showError("Could not complete the request", errorMessage(outcome));
                 case SUCCEEDED -> outcome.result().ifPresentOrElse(
                         this::showResult,
                         () -> showMessage(outcome.summary(), "label-subtle"));
             }
+            resultObserver.run();
+            if (outcome.status() == CommandStatus.SUCCEEDED) commandField.clear();
+            commandField.requestFocus();
         });
     }
 
@@ -535,12 +568,7 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
     }
 
     private void showSystem(SystemSnapshot snapshot) {
-        showMessage("OS: " + snapshot.osName() + " " + snapshot.osVersion(), "text-primary");
-        showMessage("Architecture: " + snapshot.architecture(), "text-primary");
-        showMessage("CPU load: " + (snapshot.cpuLoadPercent().isPresent()
-                ? String.format("%.1f%%", snapshot.cpuLoadPercent().getAsDouble()) : "Unavailable"), "text-primary");
-        showMessage("Memory: " + optionalBytes(snapshot.availableMemoryBytes()) + " available / "
-                + optionalBytes(snapshot.totalMemoryBytes()) + " total", "text-primary");
+        results.getChildren().add(SystemResultView.create(snapshot));
     }
 
     private void showHistory(HistoryResult history) {
@@ -559,9 +587,23 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         cancelButton.setManaged(running && cancellable);
         if (!running) {
             statusLabel.setText("");
+            statusLabel.setManaged(false);
+            statusLabel.setVisible(false);
             progressBar.setVisible(false);
             progressBar.setManaged(false);
         }
+    }
+
+    private void showError(String title, String explanation) {
+        Label heading = new Label(title);
+        heading.getStyleClass().addAll("result-heading", "label-warning");
+        heading.setWrapText(true);
+        Label detail = new Label(explanation);
+        detail.getStyleClass().add("result-metadata");
+        detail.setWrapText(true);
+        VBox surface = new VBox(14, heading, detail);
+        surface.getStyleClass().add("result-card");
+        results.getChildren().add(surface);
     }
 
     private void showMessage(String text, String styleClass) {
@@ -575,9 +617,6 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
         return outcome.error().map(StructuredError::message).orElse(outcome.summary());
     }
 
-    private static String optionalBytes(OptionalLong value) {
-        return value.isPresent() ? formatBytes(value.getAsLong()) : "Unavailable";
-    }
 
     private static String formatBytes(long bytes) {
         if (bytes < 1_024) return bytes + " B";
@@ -595,7 +634,52 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
     }
 
     public void setSearchScope(String scope) {
-        searchScopeLabel.setText("Search scope: " + scope);
+        searchScopeLabel.setText(scope);
+    }
+
+    /** Transfers the existing command controls to the shell; submission wiring stays here. */
+    public VBox detachCommandBar() {
+        setTop(null);
+        setBottom(null);
+        topBox.getStyleClass().add("command-bar");
+        return topBox;
+    }
+
+    /** Keep global completion feedback out of other destination summaries. */
+    public void presentDestination(boolean home) {
+        if (executionBrain != null && currentSubscription == null) {
+            boolean showCompletion = home && executionBrain.getStyleClass().contains("pipeline-complete");
+            executionBrain.setVisible(showCompletion);
+            executionBrain.setManaged(showCompletion);
+        }
+        commandField.setPromptText(home ? "Ask JADE anything…" : "Ask JADE in this context…");
+    }
+
+    public String searchScope() {
+        return searchScopeLabel.getText();
+    }
+
+    public void submitCommand(String command) {
+        if (currentSubscription != null) return;
+        commandField.setText(command);
+        onSubmit();
+    }
+
+    public void onResult(Runnable observer) {
+        resultObserver = java.util.Objects.requireNonNull(observer, "observer");
+    }
+
+    public void onState(Consumer<VoiceState> observer) {
+        stateObserver = java.util.Objects.requireNonNull(observer, "observer");
+    }
+
+    /**
+     * Observes the name of the project JADE actually activated (a typed
+     * {@code ProjectContext} result), so the shell can show a truthful
+     * project indicator. Never fires for a guessed project.
+     */
+    public void onProject(Consumer<String> observer) {
+        projectObserver = java.util.Objects.requireNonNull(observer, "observer");
     }
 
     /**
@@ -608,6 +692,7 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             return;
         }
         this.voicePanel = panel;
+        commandRow.getChildren().add(panel.detachMicrophone());
         if (topBox != null) {
             topBox.getChildren().add(panel);
         }

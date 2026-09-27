@@ -38,8 +38,11 @@ On a JDK containing `jpackage`, create a platform-specific app image from the pa
 mkdir -p target/jpackage-input target/release
 cp target/jade.jar target/jpackage-input/jade.jar
 jpackage --type app-image --name JADE --input target/jpackage-input \
-  --main-jar jade.jar --main-class com.jade.app.JadeLauncher --dest target/release
+  --main-jar jade.jar --main-class com.jade.app.JadeLauncher --dest target/release \
+  --mac-package-identifier com.jade
 ```
+
+The `--mac-package-identifier` option is macOS-specific; omit it on other platforms. This procedure creates an app image without requesting Developer ID signing or notarization.
 
 On macOS, launch the generated image with `open target/release/JADE.app`. App images are specific to the OS and architecture that created them.
 
