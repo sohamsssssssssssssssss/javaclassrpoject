@@ -1,1 +1,95 @@
-# javaclassrpoject
+# javaclassrpoject - JADE
+
+JADE is a Java 21/JavaFX desktop assistant. Sprint 1 provides real typed commands for bounded PDF filename search, system status, configured macOS application launching and persistent SQLite history.
+
+## Setup
+
+Required to build: JDK 21+ and Maven 3.9+. The build compiles with `--release 21`. The final Sprint 1 gate used OpenJDK 25.0.2 and Maven 3.9.16 on macOS 27 ARM64. JavaFX 21 requires macOS 11+ or Linux with GTK 3; Windows is also supported by JavaFX, but JADE application launching is currently macOS-only.
+
+Choose the search folder in the first-run window, or configure it before launch:
+
+```sh
+mvn -Djade.search.roots="/path/to/demo-folder" javafx:run
+```
+
+Multiple roots use the OS path separator (`:` on macOS/Linux, `;` on Windows). Optional settings:
+
+```sh
+mvn \
+  -Djade.search.roots="/path/to/demo-folder" \
+  -Djade.app.alias="my calculator" \
+  -Djade.data.dir="/path/to/app-data" \
+  javafx:run
+```
+
+Equivalent environment variables are `JADE_SEARCH_ROOTS`, `JADE_APP_ALIAS` and `JADE_DATA_DIR`. The custom alias maps only to the configured Calculator app; it is never interpreted as a command or executable path. Without a data override, history is stored in the platform user application-data directory.
+
+## Local intelligence
+
+Actions still use JADE's tokenizer and typed deterministic parser. General
+questions use an installed local model through Ollama; current Java/Maven
+questions can retrieve bounded official web evidence and synthesize it locally.
+No paid LLM API or OpenAI key is required. Models are not bundled or downloaded
+by JADE. Set `JADE_LOCAL_MODEL` to an installed model and start a loopback-only
+runtime. See [local setup, research limits, and optional providers](docs/RESEARCH_V1.md).
+
+## Build and distribution
+
+```sh
+mvn test
+mvn -DskipTests package
+java -jar target/jade.jar
+```
+
+On a JDK containing `jpackage`, create a platform-specific app image from the packaged jar. Use a clean input directory so build reports are not bundled:
+
+```sh
+mkdir -p target/jpackage-input target/release
+cp target/jade.jar target/jpackage-input/jade.jar
+jpackage --type app-image --name JADE --input target/jpackage-input \
+  --main-jar jade.jar --main-class com.jade.app.JadeLauncher --dest target/release \
+  --mac-package-identifier com.jade
+```
+
+The `--mac-package-identifier` option is macOS-specific; omit it on other platforms. This procedure creates an app image without requesting Developer ID signing or notarization.
+
+On macOS, launch the generated image with `open target/release/JADE.app`. App images are specific to the OS and architecture that created them.
+
+## Supported commands
+
+- `open calculator` / `open calc`
+- `open "text editor"` / `open editor`
+- `open "file manager"` / `open files`
+- `find PDFs`, `find pdf files`, `find txt files`, `find jpgs` (known extensions)
+- `find PDFs larger than 20 MB`, `find zip files smaller than 1 GB`
+- `find pdfs from yesterday`, `find txt files from today`, `find pdfs from this week`, `find pdfs from this month`, `find pdfs from saturday`
+- `create folder called College`
+- `move these files to Review` / `copy these files to Review` (acts on the last search result)
+- `rename the newest to summary`
+- `undo` (reverses the last move/rename command)
+- `system status` / `status`
+- `show history` / `history`
+- `list files` (top-level files of the scope; usable as a selection)
+- `file info <name>` / `what is <name>` (top-level scope files, case-insensitive)
+- `find <ext> files containing "text"` (document-content search over the last search of the session; TXT, PDF, DOCX and other Tika-supported formats; at most 100 documents)
+- `open project <path>` (activates a Maven project: directory + `pom.xml`)
+- `what project am I working on` / `what kind of project is this` / `give me a project summary` / `project summary` / `inspect this|the project`
+- `show me the project structure` (bounded tree: depth ≤ 6, ≤ 400 entries, truncation reported)
+- `how many java files [are there]` / `where are the tests` (source/test/resource/package counts)
+- `what dependencies does it use` (declared POM dependencies; unresolved/inherited versions are reported as UNKNOWN)
+- `what is|what's the main class` / `what are the main classes` (static main-method detection; 0/1/many reported, never guessed)
+- `are there any todos` / `what are the todos` (TODO/FIXME scan; ≤ 50 findings, bounded snippets)
+- `run the tests` / `build it` (bounded Maven runs with timeout and truthful output tail)
+- `what happened` (last project operation) / `what failed` / `show me the errors` / `how many tests failed` (structured diagnostics)
+- Compound requests: `inspect this project and run [the] tests`, `inspect this project and build it`, `run [the] tests and tell me what failed`, `run [the] tests and show me the errors`, `run [the] tests and what failed|happened`, `build it and (tell me) what happened`
+
+Project support is **static and bounded**: inspection never modifies the project, never executes Maven to answer questions, and never resolves/downloads dependencies. Diagnostics read Surefire XML reports inside the active project plus the captured output of the last run; unmatched output is reported as UNKNOWN, never interpreted. The planner is deterministic — every supported compound phrase maps to a fixed typed step list, and it cannot generate arbitrary commands or touch file mutations.
+
+Search returns at most 50 matches and visits at most 10,000 regular files. It never follows symbolic links. MB means 1,048,576 bytes. Filenames and paths retain their original case.
+
+File mutations are confined to the configured scope folder: JADE never follows symlinks, never overwrites an existing target, never moves a folder into itself, and has no delete capability. Every move/copy/rename/create command shows a preview of exactly which files will be affected and asks for confirmation before anything changes; cancelling is always safe. Moves and renames can be undone with `undo`; copies and folder creations deliberately cannot.
+
+Application launch is implemented on macOS using explicit `ProcessBuilder` argument lists. Windows/Linux return a visible unsupported-platform error. A successful outcome means the OS accepted the launch request; it does not claim the window was observed.
+
+Voice input (optional Vosk model, see `docs/AUDIO_FEASIBILITY.md`), speaker-identified greetings and document-content search (Apache Tika) are available as of sprints 3–4; spoken commands use exactly the same grammar as typed commands — including the project, diagnostics and compound-request grammar. Bounded multi-step planning (the fixed compound list above) exists as of sprint 5. Still not available: arbitrary natural-language planning, LLMs/AI reasoning, automation, file deletion and workspace restore. Legacy `JARVIS_*` environment variables and a legacy data directory are honoured only as a one-time migration fallback for existing installs; JADE keys and the JADE data directory always win.
+
