@@ -1,0 +1,73 @@
+A guide to keeping a useful experiment notebook
+
+Begin with a question that has a measurable answer. Instead of writing that a program should become faster, record which operation takes too long and how much improvement would matter. A claim about speed is incomplete without the input size, the machine, and the method used to measure time. If a trial runs for only a few milliseconds, repeat it under the same conditions before treating the result as reliable.
+
+Write down the date, the configuration, and the reason for each change. A notebook is most useful when another person can reconstruct the decisions without asking its author to remember them. Keep the original observations beside any interpretation. Numbers copied into a polished chart can look more certain than the measurements deserve, especially when different trials were performed on different computers.
+
+Before an experiment begins, choose the observations that will count as evidence. If the program generates sentences, decide which prompts to use before seeing any output. Save awkward examples alongside pleasant ones. An experiment that reports only its best result tells us little about what usually happens. The purpose of a benchmark is to expose behavior under stated conditions, not to collect impressive quotations.
+
+When a test fails, distinguish the observation from the explanation. "The file could not be opened" describes an event. "The disk has failed" proposes a cause. The second statement needs more evidence. Perhaps the path is wrong, the permissions changed, or the file was moved. Investigating several plausible causes often takes less time than pursuing the first explanation with confidence.
+
+A conversation at the repair desk
+
+"My printer worked yesterday," said the customer. "Today it produces blank pages."
+
+"Did anything change between the two attempts?" the technician asked.
+
+"I replaced the cartridge. The new one looked identical to the old one."
+
+The technician opened the cover and found a strip of protective tape across the cartridge outlet. Removing the strip restored normal printing. No circuit board had broken, and no software update was necessary. The useful question had concerned the last change, rather than the age of the machine.
+
+"How much do I owe you?"
+
+"Nothing for this visit. Next time, check the small instruction sheet before throwing the packaging away."
+
+The customer laughed, folded the sheet, and placed it in a drawer beside the printer. That simple habit would be more valuable than remembering the technician's name.
+
+Why a checksum is useful
+
+A checksum is a compact value computed from a sequence of bytes. If the bytes change, the computed value will usually change too. A cryptographic digest such as SHA-256 is designed to make accidental collisions extremely unlikely and deliberate collision construction difficult. It helps identify content; it does not tell us whether that content is trustworthy.
+
+Suppose two directories contain files with the same names but different contents. Comparing their names will miss the difference. Comparing their byte counts will catch only changes that alter length. Comparing content digests can expose changes even when each file has exactly the same number of bytes. A manifest can store a relative path, a length, and a digest for every file in a collection.
+
+A digest cannot repair a damaged file. It can tell the reader that the stored bytes differ from the expected bytes. Recovery still requires a good copy. Nor does a digest prove that a document's statements are correct. A perfectly preserved report may contain a mistaken conclusion. Integrity, authenticity, and factual accuracy answer different questions.
+
+Moving a meeting
+
+On 14 March 2026, a neighborhood group planned to meet at 18:30 in the upstairs hall. A water leak made the hall unavailable shortly before the meeting. The organizer sent a brief message: the discussion would take place downstairs, the entrance would remain the same, and anyone needing step-free access could use the side door.
+
+The message did not include a lengthy history of the building. It gave people enough information to make their immediate decision. After the meeting, the group recorded the leak and the temporary room change in its minutes. The short notice and the permanent record served different purposes.
+
+One member arrived late because he had read an older invitation. The organizer apologized for the confusion and put a sign beside the stairs. Sending a correction is useful, but a sign at the point where a person must choose a direction can prevent a second mistake.
+
+Questions about storing text
+
+What is a character? The answer depends on the level being discussed. A displayed symbol may consist of several Unicode code points, and a single code point may occupy several bytes in UTF-8. Java strings use UTF-16 code units internally. Counting bytes, code points, and user-perceived characters therefore produces different numbers for some strings.
+
+Does a byte tokenizer need an unknown-word token? A tokenizer that begins with every possible byte value can represent any valid UTF-8 text as bytes. Learned merges can shorten that representation without removing the original byte values. A new word may require more tokens than a familiar word, but it can still be encoded exactly.
+
+Can a file contain valid UTF-8 and still be useless training data? Yes. A long sequence of repeated punctuation, a table of random identifiers, or a copied software log may decode correctly without supplying much natural language. Encoding validity is a necessary check at the file boundary; it is not a quality assessment of the prose.
+
+Two ways to carry groceries
+
+A small basket makes it easy to see each item and discourages buying more than necessary. A large wheeled bag carries heavier loads with less strain but occupies more space on a crowded bus. Neither choice is universally better. The useful comparison includes walking distance, stairs, expected weight, and the traveler's comfort.
+
+The same reasoning applies to software storage. One contiguous array offers simple indexing and little structural overhead. Several smaller chunks avoid a single very large allocation and can grow incrementally. An on-disk store supports a larger collection at the cost of file management and slower access. Choose the simplest representation that fits the actual workload, then measure before adding another layer.
+
+A careful recipe for a dry run
+
+First, create a temporary output directory. Second, copy a small representative input into it. Third, run the transformation and check both the resulting content and the exit status. Finally, remove only the temporary files created for that trial. Do not practice a destructive operation on the only copy of important data.
+
+The list is short because each action has a distinct purpose. A dry run should be easy to repeat and easy to understand. If it depends on several undocumented settings, it cannot reliably distinguish a program defect from an environment mismatch.
+
+Reading a learning curve
+
+A falling training loss means that the model predicts its training targets more accurately under the chosen objective. A falling validation loss is additional evidence when validation material is independent and has not influenced the training decisions. If both partitions repeat the same story with different names, the second observation tells us less than it appears to.
+
+A model can improve its numerical objective while producing awkward text. Next-token prediction is a local task; a coherent explanation requires many predictions to remain compatible with one another. A short fragment that resembles a sentence is not evidence that the model understands its subject. Report the measured improvement and retain examples that reveal the remaining limitations.
+
+A note left beside a shared computer
+
+Please save your work before restarting this machine. The update takes approximately 15 minutes, but slower storage may extend that interval. If you find an unfamiliar error, copy the exact message into the maintenance log. Avoid changing several settings at once: a sequence of small, recorded changes makes the cause of an improvement easier to identify.
+
+If the display goes dark while the computer is still running, check the monitor connection before holding the power button. An interrupted write can damage an unsaved document. The distinction between a display problem and a stopped program matters because the safest response differs.

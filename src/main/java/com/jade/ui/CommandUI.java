@@ -28,6 +28,7 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
     private final Label searchScopeLabel = new Label();
     private CommandSubscription currentSubscription;
     private Consumer<VoiceState> stateObserver = ignored -> { };
+    private Consumer<java.net.URI> sourceOpener = ignored -> { };
     private Consumer<String> projectObserver = ignored -> { };
 
     public CommandUI(CommandGateway gateway) {
@@ -142,6 +143,7 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             currentSubscription = null;
             setRunning(false);
             stateObserver.accept(outcome.status() == CommandStatus.FAILED || outcome.status() == CommandStatus.REJECTED
+                    || outcome.result().orElse(null) instanceof AnswerResult answer && answer.status() == AnswerStatus.FAILED
                     ? VoiceState.ERROR : VoiceState.IDLE);
             if (outcome.result().orElse(null) instanceof com.jade.api.ProjectContext project) {
                 projectObserver.accept(project.name());
@@ -175,6 +177,28 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
                 showMessage("Application ID: " + receipt.appId(), "label-subtle");
             }
             case FileSearchResult files -> showFiles(files);
+            case AnswerResult answer -> {
+                if (answer.status() == AnswerStatus.FAILED) {
+                    showError("Knowledge answer unavailable", answer.answerText());
+                } else {
+                    showMessage(answer.mode() == AnswerMode.WEB_RESEARCH ? "Web research" : "General question", "result-heading");
+                    showMessage(answer.answerText(), "result-metadata");
+                    if (!answer.provider().isBlank()) showMessage(answer.provider().equals("local")
+                            ? (answer.usedWeb() ? "WEB · LOCAL SYNTHESIS" : "LOCAL · " + answer.model())
+                            : answer.provider() + " · " + answer.model(), "label-subtle");
+                    for (var source : answer.evidence()) {
+                        try {
+                            var hit = new WebSearchProvider.Hit(source.title(), java.net.URI.create(source.reference()), "");
+                            Hyperlink link = new Hyperlink(hit.title());
+                            link.getStyleClass().add("result-metadata"); link.setWrapText(true);
+                            link.setTooltip(new Tooltip(hit.uri().toString()));
+                            link.setOnAction(event -> { try { sourceOpener.accept(hit.uri()); } catch (RuntimeException unavailable) { statusLabel.setText("Could not open the source link."); } });
+                            results.getChildren().add(link);
+                            showMessage(hit.uri().getHost(), "label-subtle");
+                        } catch (IllegalArgumentException invalidSource) { /* No unsafe link handlers. */ }
+                    }
+                }
+            }
             case SystemSnapshot snapshot -> showSystem(snapshot);
             case HistoryResult history -> showHistory(history);
             case MutationReceipt mutation -> showMutation(mutation);
@@ -632,6 +656,8 @@ public final class CommandUI extends BorderPane implements AutoCloseable {
             Platform.runLater(action);
         }
     }
+
+    public void setSourceOpener(Consumer<java.net.URI> opener) { sourceOpener = java.util.Objects.requireNonNull(opener); }
 
     public void setSearchScope(String scope) {
         searchScopeLabel.setText(scope);

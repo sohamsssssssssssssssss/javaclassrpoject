@@ -19,6 +19,12 @@ public sealed interface CommandPlan {
         }
     }
 
+    record GeneralQuestionPlan(com.jade.api.GeneralQuestion question) implements CommandPlan {
+        public GeneralQuestionPlan {
+            Objects.requireNonNull(question, "question");
+        }
+    }
+
     record SystemStatus() implements CommandPlan {
     }
 

@@ -1,0 +1,12 @@
+relative_path	category	bytes	code_points	digest	provenance_type	source
+01-austen.txt	dialogue/social narrative	30455	29817	a95e22190b43f11a47eb6a68c8a5718a233755af45552d42574f7fefeba30b07	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/1342/pg1342.txt
+02-darwin.txt	scientific explanation/cause and effect	29765	29715	70f2dff5af0310226f9c1ddfede995c83b1617b5be47c9abec9c460782d0065e	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/1228/pg1228.txt
+03-franklin.txt	autobiography/practical reasoning	30050	30049	9f68bc9bec35e50650952d0f6deffc055afc95dedfa057a2f1ce82e05f4c338e	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/148/pg148.txt
+04-thoreau.txt	descriptive/philosophical prose	29056	28935	1f2033554005fb38e78c6bc79d9b2565207c76e90d6f69f8575c67e0020fa1dd	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/205/pg205.txt
+05-carroll.txt	dialogue/questions/fantasy	30586	29359	ed189bedf80708bfc9cc1aa4daa4aa48f6849ea39a022915e89c486659a97e0d	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/11/pg11.txt
+06-machiavelli.txt	comparison/argument/explanation	25051	25014	39f6f52010b7fd89496ca680f92f6dfbde1264dcb8c96057bec84074e9087929	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/1232/pg1232.txt
+07-douglass.txt	historical narrative/factual prose	30536	30388	4b717bd9731b7bffb9b891c67a85cf214eb5fc94d4791af2d8e5765a0f74fd6b	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/23/pg23.txt
+08-melville.txt	descriptive narrative/definitions	30070	29624	1067cf7f9aa259e0a28af84500e099a51bbd9467c5cf8327bbad026ec09c7879	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/2701/pg2701.txt
+09-modern-original.txt	procedures/technical/QA/everyday English	8530	8530	a53c659ccc94994683733e027693f8a41b27d2ab9a2db947252110a682e2170e	original English authored for JADE Loop 5D	local
+10-doyle.txt	validation: independent detective dialogue	30632	29919	36a1145ce199877946939700a20c5a73b33b2598631f5f52799193e342df0dd7	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/1661/pg1661.txt
+11-wells.txt	test: independent speculative explanation	30232	29859	c21bcf68a60d774643c4f9d761d7940443c1565a97b082ce657a791f67fef06d	public-domain historical English excerpt	https://www.gutenberg.org/cache/epub/35/pg35.txt

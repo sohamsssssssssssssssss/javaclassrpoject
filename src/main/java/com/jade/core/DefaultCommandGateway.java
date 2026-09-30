@@ -112,6 +112,7 @@ public final class DefaultCommandGateway implements CommandGateway {
     private final HistoryRepository historyRepository;
     private final ExecutorService executor;
     private final CommandParser parser;
+    private final com.jade.api.AnswerService answerService;
     private final FileMutationService mutationService;
     private final UndoJournal undoJournal;
     private final List<Path> scopeRoots;
@@ -201,6 +202,22 @@ public final class DefaultCommandGateway implements CommandGateway {
             FileOpener fileOpener,
             ProjectService projectService,
             ProjectProcessRunner projectProcessRunner) {
+        this(appService, fileSearchService, systemInfoService, historyRepository, executor,
+                mutationService, undoJournal, scopeRoots, confirmationHandler, clock,
+                fileService, contentSearchService, fileOpener, projectService, projectProcessRunner,
+                new com.jade.services.answer.UnavailableAnswerService());
+    }
+
+    /** Research Loop 1: a knowledge-only service alongside the existing action services. */
+    public DefaultCommandGateway(
+            AppService appService, FileSearchService fileSearchService,
+            SystemInfoService systemInfoService, HistoryRepository historyRepository,
+            ExecutorService executor, FileMutationService mutationService, UndoJournal undoJournal,
+            List<Path> scopeRoots, ConfirmationHandler confirmationHandler, Clock clock,
+            FileService fileService, ContentSearchService contentSearchService, FileOpener fileOpener,
+            ProjectService projectService, ProjectProcessRunner projectProcessRunner,
+            com.jade.api.AnswerService answerService) {
+        this.answerService = java.util.Objects.requireNonNull(answerService, "answerService");
         this.appService = java.util.Objects.requireNonNull(appService, "appService");
         this.fileSearchService = java.util.Objects.requireNonNull(fileSearchService, "fileSearchService");
         this.systemInfoService = java.util.Objects.requireNonNull(systemInfoService, "systemInfoService");
@@ -310,7 +327,9 @@ public final class DefaultCommandGateway implements CommandGateway {
                 emit(onProgress, request.id(), ProgressStage.PLANNING, "Planning command", 0, OptionalLong.empty());
                 CommandResult result = executePlan(plan, submission, request.id(), onProgress);
                 cancelled(submission);
-                outcome = terminal(request.id(), CommandStatus.SUCCEEDED, summary(result),
+                CommandStatus resultStatus = result instanceof com.jade.api.AnswerResult answer
+                        && answer.status() == com.jade.api.AnswerStatus.FAILED ? CommandStatus.FAILED : CommandStatus.SUCCEEDED;
+                outcome = terminal(request.id(), resultStatus, summary(result),
                         Optional.of(result), Optional.empty(), started);
             }
         } catch (CommandParseException e) {
@@ -343,6 +362,15 @@ public final class DefaultCommandGateway implements CommandGateway {
             Submission cancellation,
             UUID requestId,
             Consumer<ProgressEvent> onProgress) throws ServiceException {
+        if (plan instanceof CommandPlan.GeneralQuestionPlan question) {
+            cancelled(cancellation);
+            emit(onProgress, requestId, ProgressStage.PLANNING, "Thinking…", 0, OptionalLong.empty());
+            com.jade.api.AnswerResult answer = answerService.answer(
+                    new com.jade.api.AnswerRequest(question.question()), cancellation,
+                    message -> emit(onProgress, requestId, ProgressStage.PLANNING, message, 0, OptionalLong.empty()));
+            cancelled(cancellation);
+            return java.util.Objects.requireNonNull(answer, "answer");
+        }
         if (plan instanceof CommandPlan.OpenApp open) {
             return appService.launch(open.lookupName(), cancellation);
         }
@@ -1220,6 +1248,9 @@ public final class DefaultCommandGateway implements CommandGateway {
     }
 
     private static String summary(CommandResult result) {
+        if (result instanceof com.jade.api.AnswerResult answer) {
+            return answer.answerText();
+        }
         if (result instanceof AppLaunchReceipt receipt) {
             return "Launch requested for " + receipt.displayName();
         }

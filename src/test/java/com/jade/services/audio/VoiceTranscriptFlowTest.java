@@ -184,6 +184,45 @@ class VoiceTranscriptFlowTest {
     private static final int MIN_BYTES = VoiceCommandController.MIN_UTTERANCE_BYTES;
 
     @Test
+    void typedAndSpokenQuestionsUseTheSameRealGateway() throws Exception {
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        List<com.jade.api.HistoryEntry> history = java.util.Collections.synchronizedList(new ArrayList<>());
+        com.jade.api.HistoryRepository repository = new com.jade.api.HistoryRepository() {
+            public void save(com.jade.api.HistoryEntry entry) { history.add(entry); }
+            public List<com.jade.api.HistoryEntry> recent(int limit, com.jade.api.CancellationToken token) { return List.copyOf(history); }
+            public void close() { }
+        };
+        com.jade.api.AppService apps = new com.jade.api.AppService() {
+            public List<com.jade.api.ConfiguredApp> configuredApps() { return List.of(); }
+            public com.jade.api.AppLaunchReceipt launch(String id, com.jade.api.CancellationToken token) {
+                throw new IllegalStateException("Question must not launch applications");
+            }
+        };
+        String question = "what is recursion?";
+        ScriptedRecognition recognition = new ScriptedRecognition();
+        recognition.scriptNext("hello jade"); recognition.scriptNext(question);
+        ScriptedSynthesis synthesis = new ScriptedSynthesis();
+        CountDownLatch idle = new CountDownLatch(1);
+        try (var gateway = new com.jade.core.DefaultCommandGateway(apps,
+                (query, token, progress) -> { throw new IllegalStateException("Question must not search files"); },
+                token -> { throw new IllegalStateException("Question must not query system metrics"); }, repository, executor);
+             var controller = new VoiceCommandController(new ScriptedCapture(), recognition,
+                new TranscriptWakePhraseDetector(), synthesis, null,
+                new GreetingService(java.time.Clock.systemUTC()), gateway,
+                state -> { if (state == VoiceState.IDLE) idle.countDown(); }, ignored -> { }, null, null)) {
+            var typed = new java.util.concurrent.CompletableFuture<CommandOutcome>();
+            gateway.submit(CommandRequest.create(question), ignored -> { }, typed::complete);
+            var outcome = typed.get(3, TimeUnit.SECONDS);
+            assertEquals(CommandStatus.SUCCEEDED, outcome.status());
+            assertTrue(outcome.result().orElseThrow() instanceof com.jade.api.AnswerResult);
+            controller.beginSession();
+            assertTrue(idle.await(10, TimeUnit.SECONDS));
+            assertEquals(List.of(question, question), history.stream().map(com.jade.api.HistoryEntry::originalText).toList());
+            assertTrue(synthesis.spoken.contains("Knowledge answering is not configured yet."));
+        } finally { executor.shutdownNow(); }
+    }
+
+    @Test
     void wakeThenCommandReachesTheExistingGateway() throws Exception {
         RecordingGateway gateway = new RecordingGateway("Command accepted", CommandStatus.SUCCEEDED);
         ScriptedRecognition recognition = new ScriptedRecognition();

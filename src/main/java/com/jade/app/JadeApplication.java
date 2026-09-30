@@ -122,8 +122,10 @@ public final class JadeApplication extends Application {
                     new com.jade.services.files.ContentSearchService(),
                     new DesktopFileOpener(),
                     new com.jade.services.project.FileSystemProjectService(),
-                    new com.jade.services.project.MavenProjectProcessRunner());
+                    new com.jade.services.project.MavenProjectProcessRunner(),
+                    com.jade.services.answer.AnswerConfiguration.load());
             commandUI = new CommandUI(gateway);
+            commandUI.setSourceOpener(uri -> getHostServices().showDocument(uri.toString()));
             commandUI.setSearchScope(configuration.scopeDescription());
             com.jade.ui.ExecutionBrainPanel brain = new com.jade.ui.ExecutionBrainPanel();
             commandUI.setExecutionBrain(brain);

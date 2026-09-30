@@ -75,6 +75,17 @@ public final class CommandParser {
         if (tokens.isEmpty()) {
             throw invalid("Enter a command");
         }
+        try {
+            return parseDeterministic(tokens);
+        } catch (CommandParseException rejection) {
+            if (isGeneralQuestion(input, tokens)) {
+                return new CommandPlan.GeneralQuestionPlan(new com.jade.api.GeneralQuestion(input));
+            }
+            throw rejection;
+        }
+    }
+
+    private CommandPlan parseDeterministic(List<CommandTokenizer.Token> tokens) throws CommandParseException {
         String first = keyword(tokens.getFirst());
         switch (first) {
             case "open" -> {
@@ -178,7 +189,9 @@ public final class CommandParser {
                         && keyword(tokens.get(5)).equals("on")) {
                     return new CommandPlan.CurrentProject();
                 }
-                if (tokens.size() == 3 && keyword(tokens.get(1)).equals("is")) {
+                // Preserve explicit file subjects; bare topics belong to informational fallback.
+                if (tokens.size() == 3 && keyword(tokens.get(1)).equals("is")
+                        && (tokens.get(2).quoted() || tokens.get(2).value().matches(".+\\.[^\\s.]+"))) {
                     return new CommandPlan.FileInfo(tokens.get(2).value().strip());
                 }
                 CommandPlan diagnosticsQuestion = parseProjectDiagnosticsQuestion(tokens);
@@ -211,6 +224,43 @@ public final class CommandParser {
                 throw invalid("Unsupported command. Try open, find PDFs, system status, or show history");
             }
         }
+    }
+
+    /** Conservative informational fallback; malformed tokenization never reaches this method. */
+    private static boolean isGeneralQuestion(String input, List<CommandTokenizer.Token> tokens) {
+        if (input.length() > com.jade.api.GeneralQuestion.MAX_LENGTH || tokens.size() > 64
+                || input.chars().anyMatch(c -> Character.isISOControl(c)
+                    || ";|&`$<>\\".indexOf(c) >= 0)) return false;
+        List<String> words = phraseWords(tokens);
+        Set<String> actionOrContext = Set.of("rm", "bash", "sh", "zsh", "sudo", "curl", "wget",
+                "execute", "run", "delete", "move", "copy", "rename", "create", "build", "undo",
+                "confirm", "cancel", "open", "find", "it", "this", "that", "these",
+                "project", "files", "tests", "todos", "errors", "failures", "code", "classes");
+        for (int i = 0; i < words.size(); i++) {
+            if (words.get(i).equals("this") && i + 1 < words.size() && words.get(i + 1).equals("week")) continue;
+            if (words.get(i).equals("it") && i >= 4 && words.getFirst().equals("what") && words.contains("explain")) continue;
+            if (actionOrContext.contains(words.get(i))) return false;
+        }
+        int prefix = switch (words.isEmpty() ? "" : words.getFirst()) {
+            case "what" -> words.size() > 1 && Set.of("is", "are", "does", "happened").contains(words.get(1)) ? 2 : 0;
+            case "what's", "whats" -> 1;
+            case "why", "explain" -> 1;
+            case "how" -> words.size() > 1 && Set.of("does", "do", "is").contains(words.get(1)) ? 2 : 0;
+            case "who" -> words.size() > 1 && Set.of("is", "was", "invented", "won").contains(words.get(1)) ? 2 : 0;
+            case "when" -> words.size() > 1 && Set.of("is", "was", "does", "did").contains(words.get(1)) ? 2 : 0;
+            case "where" -> words.size() > 1 && Set.of("is", "are").contains(words.get(1)) ? 2 : 0;
+            case "tell" -> words.size() > 2 && words.get(1).equals("me") && words.get(2).equals("about") ? 3 : 0;
+            case "difference" -> words.size() > 1 && words.get(1).equals("between") ? 2 : 0;
+            case "search" -> words.size() > 3 && words.get(1).equals("the") && words.get(2).equals("web") ? (words.get(3).equals("for") ? 4 : 3) : 0;
+            case "google" -> 1;
+            case "look" -> words.size() > 1 && words.get(1).equals("up") ? 2 : 0;
+            case "compare" -> 1;
+            default -> 0;
+        };
+        return prefix > 0 && words.size() > prefix
+                && words.subList(prefix, words.size()).stream().allMatch(w -> (w.matches("[\\p{L}\\p{N}][\\p{L}\\p{N}.'-]*") || w.matches("https://[A-Za-z0-9./:_?=%+-]{1,590}")))
+                && words.subList(prefix, words.size()).stream().anyMatch(w ->
+                    !Set.of("a", "an", "the").contains(w) && w.chars().anyMatch(Character::isLetter));
     }
 
     /**

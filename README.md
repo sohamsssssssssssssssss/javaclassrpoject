@@ -24,6 +24,15 @@ mvn \
 
 Equivalent environment variables are `JADE_SEARCH_ROOTS`, `JADE_APP_ALIAS` and `JADE_DATA_DIR`. The custom alias maps only to the configured Calculator app; it is never interpreted as a command or executable path. Without a data override, history is stored in the platform user application-data directory.
 
+## Local intelligence
+
+Actions still use JADE's tokenizer and typed deterministic parser. General
+questions use an installed local model through Ollama; current Java/Maven
+questions can retrieve bounded official web evidence and synthesize it locally.
+No paid LLM API or OpenAI key is required. Models are not bundled or downloaded
+by JADE. Set `JADE_LOCAL_MODEL` to an installed model and start a loopback-only
+runtime. See [local setup, research limits, and optional providers](docs/RESEARCH_V1.md).
+
 ## Build and distribution
 
 ```sh

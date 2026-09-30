@@ -73,11 +73,12 @@ class CommandParserProjectIntelligenceTest {
     }
 
     @Test
-    void fileQuestionGrammarIsUnchanged() throws Exception {
+    void explicitFileQuestionsRetainPriority() throws Exception {
         assertPlan("what is report.txt", CommandPlan.FileInfo.class);
-        // The 3-token "what is <name>" form predates project intelligence
-        // and keeps its file-info meaning.
-        assertPlan("what is the", CommandPlan.FileInfo.class);
+        assertPlan("what is \"README\"", CommandPlan.FileInfo.class);
+        assertPlan("file info README", CommandPlan.FileInfo.class);
+        // A bare article is neither a file subject nor a meaningful general question.
+        assertRejected("what is the");
     }
 
     @Test

@@ -23,5 +23,6 @@ public sealed interface CommandResult permits
         MainClassCandidates,
         DiagnosticsReport,
         DiagnosticCount,
-        ExecutionResult {
+        ExecutionResult,
+        AnswerResult {
 }
