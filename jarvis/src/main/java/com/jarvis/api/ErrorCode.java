@@ -1,0 +1,13 @@
+package com.jarvis.api;
+
+public enum ErrorCode {
+    INVALID_COMMAND,
+    UNKNOWN_APP,
+    CANCELLED,
+    UNSUPPORTED_PLATFORM,
+    MISSING_DEPENDENCY,
+    ACCESS_DENIED,
+    IO_FAILURE,
+    DATABASE_FAILURE,
+    SERVICE_FAILURE
+}

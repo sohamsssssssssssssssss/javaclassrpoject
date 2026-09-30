@@ -1,0 +1,31 @@
+ M README.md
+ M pom.xml
+ M src/main/java/com/jade/api/CommandResult.java
+ M src/main/java/com/jade/app/JadeApplication.java
+ M src/main/java/com/jade/core/CommandParser.java
+ M src/main/java/com/jade/core/CommandPlan.java
+ M src/main/java/com/jade/core/DefaultCommandGateway.java
+ M src/main/java/com/jade/ui/CommandUI.java
+ M src/test/java/com/jade/core/CommandParserProjectIntelligenceTest.java
+ M src/test/java/com/jade/services/audio/VoiceTranscriptFlowTest.java
+?? docs/JADE_BRAIN.md
+?? docs/RESEARCH_V1.md
+?? docs/loop-5c/
+?? docs/loop-5d/
+?? src/main/java/com/jade/api/AnswerMode.java
+?? src/main/java/com/jade/api/AnswerRequest.java
+?? src/main/java/com/jade/api/AnswerResult.java
+?? src/main/java/com/jade/api/AnswerService.java
+?? src/main/java/com/jade/api/AnswerStatus.java
+?? src/main/java/com/jade/api/GeneralQuestion.java
+?? src/main/java/com/jade/api/KnowledgeAnswerProvider.java
+?? src/main/java/com/jade/api/LocalLanguageModel.java
+?? src/main/java/com/jade/api/WebSearchProvider.java
+?? src/main/java/com/jade/brain/
+?? src/main/java/com/jade/core/BrainTokenizerAdapter.java
+?? src/main/java/com/jade/services/answer/
+?? src/test/java/com/jade/brain/
+?? src/test/java/com/jade/core/GeneralQuestionGatewayTest.java
+?? src/test/java/com/jade/core/GeneralQuestionRoutingTest.java
+?? src/test/java/com/jade/services/answer/
+?? src/test/resources/

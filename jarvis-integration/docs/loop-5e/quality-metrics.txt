@@ -1,0 +1,17 @@
+JADE-5M Loop 5E: EnglishOutputMetrics, fixed ten prompts, 12 greedy tokens each.
+Values are arithmetic means of the ten per-prompt ratios. Exact per-prompt values,
+token IDs, escaped text and UTF-8 validity are in generation-before.txt and
+generation-after.txt. These lexical metrics do not measure intelligence.
+
+metric                         before       after
+printable-output ratio         0.938471     0.610948
+control-character ratio        0.019738     0.389052
+word-like segment ratio        0.706944     0.933333
+token-reuse repetition         0.408333     0.600000
+immediate token repetition     0.245455     0.436364
+repeated word trigrams         0.114286     0.016667
+strict UTF-8 outputs          2/10         10/10
+
+After training, many outputs repeat newline tokens. Higher word-like ratio
+mainly reflects how the metric handles the remaining fragments; it does not
+offset the drop in printable output or demonstrate language competence.

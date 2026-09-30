@@ -1,0 +1,31 @@
+CORPUS files=20 skipped=0 bytes=37429 codePoints=37429 digest=d5310d31954ee0a5b9f8591d7b70b24517d7f35ce30dcf8e5b3739210fd0a1f9 fitBytes=33687
+SPLIT trainFiles=18 validationFiles=1 testFiles=1
+BPE target=512 actual=512 train=12222 validation=682 test=678 bytesPerToken=2.755780 fitSeconds=0.122849 roundTrip=PASS
+BPE target=1024 actual=1024 train=3006 validation=170 test=160 bytesPerToken=11.219724 fitSeconds=0.158261 roundTrip=PASS
+BPE target=2048 actual=1659 train=360 validation=61 test=57 bytesPerToken=78.303347 fitSeconds=0.144803 roundTrip=PASS
+SELECTED target=512 actual=512 identity=685a56b2bf9180674319a8eacea88e4101fa3214fa514c42ea7d4ea27ab63c46 trainWindows=381 valWindows=21 testWindows=21
+TOKENIZER text="JADE learns language from examples." bytes=35 tokens=18 bytesPerToken=1.944444 roundTrip=PASS
+TOKENIZER text="Where did the spacecraft land?" bytes=30 tokens=20 bytesPerToken=1.500000 roundTrip=PASS
+TOKENIZER text="I don't think that's the correct answer." bytes=40 tokens=16 bytesPerToken=2.500000 roundTrip=PASS
+TOKENIZER text="The temperature is 27.5 degrees." bytes=32 tokens=21 bytesPerToken=1.523810 roundTrip=PASS
+TOKENIZER text="Can a small model learn useful patterns?" bytes=40 tokens=19 bytesPerToken=2.105263 roundTrip=PASS
+MODEL vocab=512 context=32 embedding=32 heads=4 layers=2 ffn=128 parameters=58368 parameterBytes=466944 momentBytes=933888 gradientBytes=466944
+SMOKE batch=4 context=32 tokens=512 steps=4 seconds=0.114600 tokensPerSecond=4467.699168
+INITIAL trainLoss=6.243747084593 valLoss=6.247628764318 valPpl=516.785949355087 testLoss=6.247410168779 testPpl=516.672994597646
+EPOCH epoch=1 trainLoss=3.878832697098 valLoss=3.896398772988 trainPpl=48.367722323076 valPpl=49.224859633288 steps=96 cumulativeSteps=96 tokens=12192 seconds=1.151530
+EPOCH epoch=2 trainLoss=2.431323077073 valLoss=2.478315190381 trainPpl=11.373920702888 valPpl=11.921162599323 steps=96 cumulativeSteps=192 tokens=12192 seconds=1.141263
+CHECKPOINT saved=english-epoch-2.jade bytes=1401888 resumedEpoch=2 integration=PASS
+EPOCH epoch=3 trainLoss=1.610421168499 valLoss=1.691385095661 trainPpl=5.004918698098 valPpl=5.426992405349 steps=96 cumulativeSteps=288 tokens=12192 seconds=1.120117
+EPOCH epoch=4 trainLoss=1.112826096666 valLoss=1.230805304272 trainPpl=3.042945913442 valPpl=3.423985776709 steps=96 cumulativeSteps=384 tokens=12192 seconds=1.113760
+EPOCH epoch=5 trainLoss=0.786739699742 valLoss=0.947266529436 trainPpl=2.196224390167 valPpl=2.578651349312 steps=96 cumulativeSteps=480 tokens=12192 seconds=1.182512
+EPOCH epoch=6 trainLoss=0.610922807211 valLoss=0.801706600070 trainPpl=1.842130546020 valPpl=2.229342279567 steps=96 cumulativeSteps=576 tokens=12192 seconds=1.160465
+TEST loss=0.826042642301 ppl=2.284261191492 supervisedTokens=672 lossReduction=5.421367526478 pplReduction=514.388733406154
+GENERATION prompt="the " beforeIds=[29, 334, 377, 137, 137, 313, 448, 312, 507, 113, 486, 47] before="\u{001d}chle\u{fffd}\u{fffd}ed the ird the toqop/" beforeUtf8=false afterIds=[372, 474, 257, 273, 256, 461, 115, 345, 470, 285, 266, 115] after="visitor asked three questions. the first was eas" afterUtf8=true
+GENERATION prompt="this " beforeIds=[29, 334, 377, 137, 137, 313, 448, 475, 146, 113, 486, 47] before="\u{001d}chle\u{fffd}\u{fffd}ed the ird easier\u{fffd}qop/" beforeUtf8=false afterIds=[444, 110, 447, 333, 312, 297, 32, 406, 417, 105, 109, 271] after="was the name of their experimen" afterUtf8=true
+GENERATION prompt="what " beforeIds=[324, 177, 137, 313, 448, 475, 146, 113, 486, 47, 255, 206] before="me\u{fffd}\u{fffd}ed the ird easier\u{fffd}qop/\u{fffd}\u{fffd}" beforeUtf8=false afterIds=[415, 273, 311, 457, 443, 480, 98, 448, 108, 280, 405, 310] after="nearest every answer,\" bird landed ou" afterUtf8=true
+GENERATION prompt="jade " beforeIds=[27, 118, 107, 345, 502, 33, 435, 203, 251, 427, 272, 206] before="\u{001b}vk. the  d! ask\u{fffd}\u{fffd}un c\u{fffd}" beforeUtf8=false afterIds=[444, 110, 447, 333, 312, 297, 32, 475, 337, 495, 372, 438] after="was the name of their easier for visitors to" afterUtf8=true
+GENERATION prompt="the computer " beforeIds=[31, 131, 137, 331, 328, 280, 272, 206, 495, 280, 3, 47] before="\u{001f}\u{fffd}\u{fffd}ing.\u{000a}saan c\u{fffd}or an\u{0003}/" beforeUtf8=false afterIds=[100, 276, 304, 97, 121, 361, 465, 333, 112, 361, 465, 333] after="displayed a list of ped a list of " afterUtf8=true
+GENERATION prompt="once upon " beforeIds=[312, 345, 502, 33, 435, 321, 282, 334, 131, 375, 19, 6] before="the. the  d! askcr anch\u{fffd}ra\u{0013}\u{0006}" beforeUtf8=false afterIds=[109, 263, 306, 286, 458, 259, 372, 337, 268, 258, 268, 407] after="monday morning.\u{000a}the visitor find infor" afterUtf8=true
+PROBES continuationIds=[97, 98, 102, 103, 107, 108, 109, 110, 111, 112, 115, 116, 119, 257, 264, 274, 275, 283, 290, 294, 299, 305, 307, 317, 318, 322, 326, 327, 329, 339, 354, 367, 372, 377, 382, 383, 388, 415, 417, 449, 465, 470, 473, 481, 488, 499] massBefore=0.090311994366 massAfter=0.795253312289 printableBefore=0.841772 printableAfter=0.995690 whitespaceBefore=0.164557 whitespaceAfter=0.163793 controlBefore=0.025316 controlAfter=0.000000
+PREFIX training="the garden was quiet when anna arrived on monday morning.\u{000a}" lossBefore=6.207153554346 lossAfter=1.808212126369 heldout="the greenhouse was quiet when tom arrived on monday morning.\u{000a}" lossBefore=6.246187208140 lossAfter=3.464099530182
+COMPLETE trainingSeconds=6.951687 totalSteps=576 totalSupervisedTokens=73152 usefulGeneralEnglishClaim=NO

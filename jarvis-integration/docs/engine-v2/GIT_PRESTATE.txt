@@ -1,0 +1,8 @@
+Before Loop 6A edits:
+HEAD 94f4190713ecd698c13c866875b621d3731a4cdb
+branch integration/sprint1
+git diff --stat: 11 tracked files, 179 insertions, 8 deletions
+git status --short: .gitignore, README.md, pom.xml and eight Java files modified;
+docs/JADE_BRAIN.md, docs/RESEARCH_V1.md, docs/loop-5c/, docs/loop-5d/,
+docs/loop-5e/, Brain sources/tests/resources and existing API/answer files untracked.
+The exact command output was inspected before edits. No reset, checkout, stage, commit, or push.

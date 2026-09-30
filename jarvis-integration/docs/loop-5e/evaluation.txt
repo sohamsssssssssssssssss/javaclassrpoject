@@ -1,0 +1,31 @@
+LOOP 5E: PASS
+Corpus manifest SHA-256: 1ee4db08e1af1b8f7540021801cc4c4774142bad20c67a76977d57174a41d6ba
+Encoded corpus/BPE identity: cfc7f5925ceca1d7b9a605c1ee92c674462437960e979c4f019b5ebb95a678b8
+5D 5M smoke checkpoint compatibility: PASS
+Files: 11; total bytes: 304963; train/validation/test bytes: 244099/30632/30232
+Vocabulary: 1024; train/validation/test tokens: 92507/12111/11980
+Train/validation/test context-32 windows: 2890/378/374
+Architecture V/C/D/H/L/F: 1024/32/256/4/6/1024; exact parameters: 5251072
+Initial deterministic 32-window train sample loss: 6.944453636078
+Initial full train loss: 6.964949817986; initial validation loss: 6.964599081833
+Initial validation perplexity: 1058.490464289761
+Epochs completed: 1; optimizer steps: 1445; supervised positions: 92480
+Epoch wall seconds: 665.031528; average positions/sec: 139.061076
+Fastest 50-step interval positions/sec: 141.055665; slowest: 130.772807
+Maximum observed JVM used heap: 1053752800 bytes; maximum JVM heap: 1610612736 bytes
+Final full train loss: 5.855433193100; train perplexity: 349.126106321195
+Final validation loss: 5.793221139573; validation perplexity: 328.068077293732
+Train loss reduction: 1.109516624886 (15.930002%)
+Validation loss reduction: 1.171377942260 (16.819029%)
+Validation perplexity reduction: 730.422386996029 (69.006043%)
+Final checkpoint saved and reloaded before test: PASS
+Reloaded optimizer steps: 1445; supervised positions: 92480; completed epochs: 1
+Reloaded inference and deterministic generation match: PASS
+Held-out aggregate test evaluations: 1, after final checkpoint
+Test loss: 5.823089292522; test perplexity: 338.014668517596; test positions: 11968
+Optimizer steps after test: 0
+Initial checkpoint: checkpoints/jade-5m-initial.jade; 126028032 bytes
+Initial checkpoint SHA-256: 493d8e515e3b9dfbf7c52bb6e400dd60efdba51e3e6161b3f5864b9ef0dc7ae9
+Final checkpoint: checkpoints/jade-5m-epoch-1.jade; 126028032 bytes
+Final checkpoint SHA-256: d85b98c3bf2b87b46ad86e8fac9a25b4ecf5f4fb0d0548faacf9cd7bd6a33f23
+Checkpoint interval: initial and final epoch boundary only; no mid-epoch resume claimed.

@@ -1,0 +1,13 @@
+target/
+docs/loop-5e/checkpoints/
+.idea/
+.vscode/
+*.iml
+*.db
+*.sqlite*
+*-wal
+*-shm
+*.log
+.DS_Store
+.env
+docs/engine-v2/checkpoints/
