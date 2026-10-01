@@ -8,6 +8,23 @@
 #endif
 
 namespace jade {
+namespace {
+std::uint64_t checked_add(std::uint64_t a,std::uint64_t b){
+    if(b>std::numeric_limits<std::uint64_t>::max()-a)throw std::overflow_error("JADE size addition overflow");
+    return a+b;
+}
+std::uint64_t checked_mul(std::uint64_t a,std::uint64_t b){
+    if(b&&a>std::numeric_limits<std::uint64_t>::max()/b)throw std::overflow_error("JADE size multiplication overflow");
+    return a*b;
+}
+std::uint64_t exact_parameters(Config c){
+    const auto d=std::uint64_t(c.width),v=std::uint64_t(c.vocab),context=std::uint64_t(c.context),
+               f=std::uint64_t(c.ffn),layers=std::uint64_t(c.layers);
+    const auto embeddings=checked_mul(checked_add(checked_mul(2,v),context),d);
+    const auto block=checked_add(checked_mul(4,checked_mul(d,d)),checked_mul(2,checked_mul(d,f)));
+    return checked_add(embeddings,checked_mul(layers,block));
+}
+}
 AllocationStats Tensor::stats_{};
 Tensor::Tensor(std::size_t rows,std::size_t columns):rows_(rows),columns_(columns) {
     if (!rows || !columns || rows>std::numeric_limits<std::size_t>::max()/columns ||
@@ -33,20 +50,36 @@ Tensor& Tensor::operator=(Tensor&& other) noexcept {
 }
 void Tensor::fill(float value){std::fill(values_.begin(),values_.end(),value);}
 
-std::size_t Config::parameter_count() const {
-    validate();
-    const auto d=std::uint64_t(width),v=std::uint64_t(vocab),c=std::uint64_t(context),
-               f=std::uint64_t(ffn),l=std::uint64_t(layers);
-    return static_cast<std::size_t>((2*v+c)*d+l*(4*d*d+2*d*f));
+std::size_t Config::parameter_count(const EngineeringLimits& limits) const {
+    validate(limits);
+    return static_cast<std::size_t>(exact_parameters(*this));
 }
-void Config::validate() const {
+void Config::validate(const EngineeringLimits& limits) const {
     if(vocab<1||vocab>65536||context<1||context>4096||width<1||width>4096||
        heads<1||heads>width||width%heads||layers<1||layers>64||ffn<1||ffn>4096)
         throw std::invalid_argument("Invalid JADE architecture");
-    const auto d=std::uint64_t(width),v=std::uint64_t(vocab),c=std::uint64_t(context),
-               f=std::uint64_t(ffn),l=std::uint64_t(layers);
-    if((2*v+c)*d+l*(4*d*d+2*d*f)>5500000)
-        throw std::invalid_argument("Loop 6A parameter ceiling exceeded");
+    if(!limits.max_parameters||limits.max_parameters>60'000'000||
+       !limits.max_peak_bytes||limits.max_peak_bytes>2ull*1024*1024*1024)
+        throw std::invalid_argument("Invalid engineering safety limits");
+    if(exact_parameters(*this)>limits.max_parameters)
+        throw std::invalid_argument("Engineering parameter ceiling exceeded");
+}
+MemoryPlan plan_memory(Config c,const EngineeringLimits& limits){
+    const auto p=std::uint64_t(c.parameter_count(limits)),bytes=checked_mul(p,sizeof(float));
+    const auto context=std::uint64_t(c.context),width=std::uint64_t(c.width),ffn=std::uint64_t(c.ffn),
+               layers=std::uint64_t(c.layers),heads=std::uint64_t(c.heads),vocab=std::uint64_t(c.vocab);
+    // Exact allocation formula for Engine's reusable states, layer caches and scratch tensors.
+    auto workspace=checked_mul(checked_add(11,checked_mul(10,layers)),checked_mul(context,width));
+    workspace=checked_add(workspace,checked_mul(checked_add(2,checked_mul(2,layers)),checked_mul(context,ffn)));
+    workspace=checked_add(workspace,checked_mul(2,checked_mul(context,vocab)));
+    workspace=checked_add(workspace,checked_mul(checked_mul(2,layers),checked_mul(heads,checked_mul(context,context))));
+    workspace=checked_mul(checked_add(workspace,context),sizeof(float));
+    const auto persistent=checked_mul(4,bytes),training=checked_add(persistent,workspace);
+    const auto load=checked_add(training,checked_mul(3,bytes));
+    const auto peak=checked_add(load,64ull*1024*1024); // Explicit engineering margin for runtime and BLAS.
+    if(peak>limits.max_peak_bytes)throw std::invalid_argument("Engineering memory budget exceeded");
+    return {bytes,bytes,bytes,bytes,persistent,workspace,checked_add(68,checked_mul(12,p)),
+            training,load,peak};
 }
 
 void gemm(Backend backend,bool ta,bool tb,int m,int n,int k,

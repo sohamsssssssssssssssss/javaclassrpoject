@@ -1,0 +1,10 @@
+[ 30%] Built target jade_engine
+[ 70%] Built target jade_engine_50m_smoke
+[ 70%] Built target jade_engine_bench
+[ 70%] Built target jade_engine_20m_smoke
+[ 70%] Built target jade_engine_tests
+[ 80%] Built target jade_chat
+[ 95%] Built target jade_pretrain
+[ 95%] Building CXX object CMakeFiles/jade_pretraining_tests.dir/tests/test_pretraining.cpp.o
+[100%] Linking CXX executable jade_pretraining_tests
+[100%] Built target jade_pretraining_tests

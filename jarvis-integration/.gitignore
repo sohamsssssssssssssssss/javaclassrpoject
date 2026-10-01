@@ -11,3 +11,10 @@ docs/loop-5e/checkpoints/
 .DS_Store
 .env
 docs/engine-v2/checkpoints/
+data/raw/
+data/processed/
+data/manifests/
+data/checkpoints/
+jade-engine/build*/
+build*/
+**/checkpoints/

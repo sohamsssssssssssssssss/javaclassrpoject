@@ -1,0 +1,7 @@
+?? ../docs/
+?? ../jade-engine/
+?? docs/engine-v2/REPORT.md
+?? docs/engine-v2/cmake-final.txt
+?? docs/engine-v2/ctest-final.txt
+?? docs/engine-v2/git-diff-check.txt
+?? docs/engine-v2/maven-package.txt

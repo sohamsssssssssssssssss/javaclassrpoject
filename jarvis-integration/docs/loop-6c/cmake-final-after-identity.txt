@@ -1,0 +1,23 @@
+-- The CXX compiler identification is AppleClang 21.0.0.21000334
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/soham/college/second year/java /java project/jarvis-integration/jarvis-integration/target/jade-engine-release
+[ 30%] Building CXX object CMakeFiles/jade_engine.dir/src/checkpoint.cpp.o
+[ 30%] Building CXX object CMakeFiles/jade_engine.dir/src/gemm.cpp.o
+[ 30%] Building CXX object CMakeFiles/jade_engine.dir/src/engine.cpp.o
+[ 40%] Linking CXX static library libjade_engine.a
+[ 40%] Built target jade_engine
+[ 70%] Building CXX object CMakeFiles/jade_engine_bench.dir/benchmarks/bench.cpp.o
+[ 70%] Building CXX object CMakeFiles/jade_engine_20m_smoke.dir/benchmarks/smoke20m.cpp.o
+[ 70%] Building CXX object CMakeFiles/jade_engine_tests.dir/tests/test_engine.cpp.o
+[ 80%] Linking CXX executable jade_engine_bench
+[ 80%] Built target jade_engine_bench
+[ 90%] Linking CXX executable jade_engine_20m_smoke
+[100%] Linking CXX executable jade_engine_tests
+[100%] Built target jade_engine_20m_smoke
+[100%] Built target jade_engine_tests

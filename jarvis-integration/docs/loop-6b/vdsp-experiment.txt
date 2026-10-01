@@ -1,0 +1,1 @@
+scalar_median_ms=2.196042 vdsp_sqrt_median_ms=3.559000 max_parameter_abs_difference=7.4505806e-09 extra_workspace_bytes=21004288

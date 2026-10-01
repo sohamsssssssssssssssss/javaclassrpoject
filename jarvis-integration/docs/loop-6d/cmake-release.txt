@@ -1,0 +1,8 @@
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/soham/college/second year/java /java project/jarvis-integration/jarvis-integration/target/jade-engine-release
+[ 33%] Built target jade_engine
+[ 83%] Built target jade_engine_20m_smoke
+[ 83%] Built target jade_engine_50m_smoke
+[ 83%] Built target jade_engine_tests
+[100%] Built target jade_engine_bench

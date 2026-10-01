@@ -1,0 +1,11 @@
+PREFLIGHT parameters=50483200 persistent=807731200 workspace=17219712 checkpoint=605798468 engineeringPeak=1497858176
+CONSTRUCT rssBefore=5914624 rssParameters=207880192 rssOptimizer=813727744 rssWorkspace=831045632 peakRss=831045632 tensorAllocations=160
+FORWARD_CHECK layers=10 heads=8 headWidth=80 causal=PASS projections=PASS loss=6.994396687
+LOSS step=0 value=7.008337975
+SINGLE_STEP totalMs=167.688625 forwardMs=23.276708 lossMs=0.1035 backwardOtherMs=23.435204 gradAccumMs=15.818796 gradNormMs=15.766542 clipMs=4.2e-05 adamwUpdateMs=86.696791 zeroMs=2.590041 norm=10.94163788 clipFactor=0.09139399524 nonzeroGradients=49867520 peakRss=832634880
+LOSS step=1 value=5.359203339
+LOSS step=2 value=4.912725449
+LOSS step=3 value=3.939012766
+LOSS step=4 value=3.587532282
+CHECKPOINT bytes=605798468 step=4 positions=256 stateHash=818848175628831145 peakRss=832634880
+RESUME reload=PASS optimizer=PASS counters=PASS nextStep=PASS referenceHash=7451805323249564468 resumedHash=7451805323249564468 loadPeakRss=1437581312

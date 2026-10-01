@@ -1,0 +1,11 @@
+# Loop 6D pre-allocation decision
+
+Baseline: Loop 6C source and focused Release CTest passed; Git state was recorded in `git-prestate.txt`. No checkpoint is tracked.
+
+Candidate: V=1024, C=32, D=640, H=8, L=10, F=2560. The source formula is `(2V+C)D + L(4D²+2DF)`; 10 conventional 4D FFNs and head width 80 give 50,483,200 parameters. Components: token embedding 655,360; positions 20,480; attention per block 1,638,400; FFN per block 3,276,800; all blocks 49,152,000; untied LM head 655,360.
+
+Each FP32 parameter, gradient, first-moment and second-moment array: 201,932,800 bytes. Persistent: 807,731,200. Reusable workspace: 17,219,712, comprising width buffers 9,093,120, FFN buffers 7,208,960, logits 262,144, attention scores/probabilities 655,360, and 128 other bytes. Minimum training buffers: 824,950,912. Checkpoint: 605,798,468. Transactional reload temporarily adds three full arrays: minimum load buffers 1,430,749,312. The engine preflight adds 64 MiB margin: 1,497,858,176, below the proposed 2 GiB engineering limit.
+
+Calibrating with Loop 6C, ordinary RSS prediction is 824,950,912 + (344,129,536 - 333,324,416) = **835,756,032 bytes**. Reload prediction is 1,430,749,312 + (584,695,808 - 575,717,504) = **1,439,727,616 bytes**. These are process-RSS estimates, distinct from the stricter preflight allocation budget. Disk had 150,732,800,000 bytes available and the machine reported 16 GiB RAM with 47% free. Two 605,798,468-byte checkpoints plus 64 MiB fit disk. Construction and reload are safe under a bounded 2 GiB engine budget; no model was allocated for this calculation.
+
+Performance estimate from separate 5M and 20M warmed medians: forward 24.8 ms, backward including forward 65.1 ms, gradient norm 16.3 ms, AdamW update 86.0 ms, optimizer including norm and zeroing 102.7 ms, total **167.8 ms**, about **381 positions/s**. Forward/backward extrapolate GEMM projection workload across the two measured shapes; optimizer extrapolates parameter traversal separately. Wider GEMMs and memory bandwidth may change rates, so use roughly ±25% as a planning interval, not a confidence bound. The gate is limited to four optimizer steps, one diagnostic resumed step, and a warmed benchmark.

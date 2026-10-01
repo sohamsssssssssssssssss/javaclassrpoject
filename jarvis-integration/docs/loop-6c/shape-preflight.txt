@@ -1,0 +1,7 @@
+embedding=458752
+position=14336
+per_layer_attention=802816
+per_layer_ffn=1605632
+all_blocks=19267584
+lm_head=458752
+total=20199424

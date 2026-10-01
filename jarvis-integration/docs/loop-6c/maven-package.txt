@@ -1,0 +1,384 @@
+[INFO] Scanning for projects...
+[INFO]
+[INFO] ---------------------------< com.jade:jade >----------------------------
+[INFO] Building JADE 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- clean:3.2.0:clean (default-clean) @ jade ---
+[INFO] Deleting /Users/soham/college/second year/java /java project/jarvis-integration/jarvis-integration/target
+[INFO]
+[INFO] --- resources:3.4.0:resources (default-resources) @ jade ---
+[INFO] Copying 3 resources from src/main/resources to target/classes
+[INFO]
+[INFO] --- compiler:3.13.0:compile (default-compile) @ jade ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 194 source files with javac [debug release 21] to target/classes
+[INFO] /Users/soham/college/second year/java /java project/jarvis-integration/jarvis-integration/src/main/java/com/jade/ui/ProjectCenterPanel.java: /Users/soham/college/second year/java /java project/jarvis-integration/jarvis-integration/src/main/java/com/jade/ui/ProjectCenterPanel.java uses unchecked or unsafe operations.
+[INFO] /Users/soham/college/second year/java /java project/jarvis-integration/jarvis-integration/src/main/java/com/jade/ui/ProjectCenterPanel.java: Recompile with -Xlint:unchecked for details.
+[INFO]
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ jade ---
+[INFO] Copying 32 resources from src/test/resources to target/test-classes
+[INFO]
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ jade ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 68 source files with javac [debug release 21] to target/test-classes
+[INFO]
+[INFO] --- surefire:3.5.2:test (default-test) @ jade ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO]
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.jade.ui.JadeShellModelTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.023 s -- in com.jade.ui.JadeShellModelTest
+[INFO] Running com.jade.ui.ExecutionStageModelTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in com.jade.ui.ExecutionStageModelTest
+[INFO] Running com.jade.ui.SystemResultViewTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in com.jade.ui.SystemResultViewTest
+[INFO] Running com.jade.ui.ProjectStructureModelTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in com.jade.ui.ProjectStructureModelTest
+[INFO] Running com.jade.core.GeneralQuestionGatewayTest
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+ERROR StatusLogger Log4j2 could not find a logging implementation. Please add log4j-core to the classpath. Using SimpleLogger to log to the console...
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.691 s -- in com.jade.core.GeneralQuestionGatewayTest
+[INFO] Running com.jade.core.CommandParserProjectIntelligenceTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.jade.core.CommandParserProjectIntelligenceTest
+[INFO] Running com.jade.core.DefaultCommandGatewayTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.116 s -- in com.jade.core.DefaultCommandGatewayTest
+[INFO] Running com.jade.core.DefaultCommandPlannerTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in com.jade.core.DefaultCommandPlannerTest
+[INFO] Running com.jade.core.CommandParserDiagnosticsTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.core.CommandParserDiagnosticsTest
+[INFO] Running com.jade.core.GeneralQuestionRoutingTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.jade.core.GeneralQuestionRoutingTest
+[INFO] Running com.jade.core.CommandParserTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in com.jade.core.CommandParserTest
+[INFO] Running com.jade.app.AppConfigurationTest
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by org.sqlite.SQLiteJDBCLoader in an unnamed module (file:/Users/soham/.m2/repository/org/xerial/sqlite-jdbc/3.53.4.0/sqlite-jdbc-3.53.4.0.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.088 s -- in com.jade.app.AppConfigurationTest
+[INFO] Running com.jade.integration.SprintFourAContextTest
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.978 s -- in com.jade.integration.SprintFourAContextTest
+[INFO] Running com.jade.integration.SprintFourPipelineTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.558 s -- in com.jade.integration.SprintFourPipelineTest
+[INFO] Running com.jade.integration.SprintTwoPipelineTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.299 s -- in com.jade.integration.SprintTwoPipelineTest
+[INFO] Running com.jade.integration.SelfInspectionDemoFlowTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.577 s -- in com.jade.integration.SelfInspectionDemoFlowTest
+[INFO] Running com.jade.integration.PlannerPipelineTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.112 s -- in com.jade.integration.PlannerPipelineTest
+[INFO] Running com.jade.integration.ProjectIntelligencePipelineTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.190 s -- in com.jade.integration.ProjectIntelligencePipelineTest
+[INFO] Running com.jade.integration.SprintOnePipelineTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.434 s -- in com.jade.integration.SprintOnePipelineTest
+[INFO] Running com.jade.integration.MavenDiagnosticsPipelineTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.031 s -- in com.jade.integration.MavenDiagnosticsPipelineTest
+[INFO] Running com.jade.brain.ScaleReadinessTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.574 s -- in com.jade.brain.ScaleReadinessTest
+[INFO] Running com.jade.brain.BrainGenerationTest
+JADE BRAIN AUTOREGRESSIVE DEMO
+Prompt: hello jade
+Prompt IDs: [1, 2]
+Generated IDs: [6, 6, 1, 0, 5, 6, 5, 5]
+Final token sequence: [1, 2, 6, 6, 1, 0, 5, 6, 5, 5]
+Generated text: recursion recursion hello <unk> is recursion is is
+Stop: MAX_NEW_TOKENS
+Forward passes: 8
+External inference: NO
+Trained: NO
+[INFO] Tests run: 17, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.022 s -- in com.jade.brain.BrainGenerationTest
+[INFO] Running com.jade.brain.BrainTokenizerTest
+JADE BRAIN V0 RANDOM-WEIGHT DEMO (not learned intelligence)
+INPUT: hello jade
+TOKENS: [1, 2]
+LOGIT SHAPE: 2x8
+TOP TOKEN ID: 6
+PARAMETERS: 9728
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in com.jade.brain.BrainTokenizerTest
+[INFO] Running com.jade.brain.ResumableTrainingTest
+ADAMW_MANUAL first=1.8847619047619046 second=1.9248241373917296 tolerance=1e-15
+RESUME_PROOF N=4 K=2 remaining=2 bytes=53352 steps=52 supervised=816 exactParameters=true exactMoments=true exactLosses=true exactGeneration=true
+ADAMW_CORPUS epoch=1 train=5.1972656801827640 validation=5.1894699559842240 trainPpl=180.77726261606867 valPpl=179.37345190542243
+ADAMW_CORPUS epoch=2 train=4.7888886998011580 validation=4.7749758385439490 trainPpl=120.16775198617026 valPpl=118.50745127355648
+ADAMW_CORPUS epoch=3 train=4.3782993760878960 validation=4.3602578764504970 trainPpl=79.702374321616320 valPpl=78.277317697419060
+ADAMW_CORPUS epoch=4 train=4.0026004942958755 validation=3.9802337510159704 trainPpl=54.740316982923940 valPpl=53.529545350800490
+ADAMW_GENERATION before=\u0011\u0005 ids=[17, 5]
+ADAMW_GENERATION after=ss ids=[115, 115]
+ADAMW_GENERATION resumed=ss ids=[115, 115]
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.278 s -- in com.jade.brain.ResumableTrainingTest
+[INFO] Running com.jade.brain.SgdTest
+SGD_MICRO step=0 loss=1.3903031364773455
+SGD_MICRO step=1 loss=1.3840267888846710
+SGD_MICRO step=5 loss=1.3625454674633257
+SGD_MICRO step=10 loss=1.3348753371377455
+SGD_MICRO step=20 loss=1.2774354483100299
+SGD_MICRO step=30 loss=1.2252035360048266
+SGD_GENERATION before=brain hello after=hello brain changed=true
+SGD_DELTA embedding.weight before=-0.010315909800877154 gradient=0.13893118489555290 after=-0.011705221649832682 expected=-0.011705221649832682 error=0.00
+SGD_DELTA blocks.0.attention.q.weight before=-0.0093867717953826980 gradient=-1.1241511257808752e-07 after=-0.0093867706712315710 expected=-0.0093867706712315710 error=0.00
+SGD_DELTA blocks.1.attention.q.weight before=0.0066151338319272240 gradient=-7.1730923835185310e-09 after=0.0066151339036581480 expected=0.0066151339036581480 error=0.00
+SGD_DELTA lmHead.weight before=-0.017472076830332380 gradient=-0.14507465989482865 after=-0.016021330231384093 expected=-0.016021330231384093 error=0.00
+SGD_FIRST lossBefore=1.3903031364773455 lossAfter=1.3840267888846710 absoluteChange=0.0062763475926745915 relativeChange=0.0045143734686358900 negativeDirection=1.3902396520256732 wrongDirection=1.3903666253696352
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in com.jade.brain.SgdTest
+[INFO] Running com.jade.brain.training.CheckpointFallbackTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.brain.training.CheckpointFallbackTest
+[INFO] Running com.jade.brain.BrainModelTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in com.jade.brain.BrainModelTest
+[INFO] Running com.jade.brain.CorpusTrainingTest
+CORPUS_DEMO files=2 bytes=228 codePoints=228 tokens=228 split=205 trainTokens=205 valTokens=23 trainExamples=51 valExamples=5 batches=13 steps=39 supervised=612
+CORPUS_INITIAL train=5.5500884892567430 validation=5.5527469558905050
+CORPUS_EPOCH number=1 train=5.4641743221203600 validation=5.4614436076535660 trainPpl=236.08084787946086 valPpl=235.43705789618505 steps=13
+CORPUS_EPOCH number=2 train=5.3730097190939460 validation=5.3678362914453150 trainPpl=215.51051871476068 valPpl=214.39846967157592 steps=13
+CORPUS_EPOCH number=3 train=5.2861375715003800 validation=5.2797263891077820 trainPpl=197.57881568612055 valPpl=196.31615376473937 steps=13
+CORPUS_GENERATION prompt=ja before=\u0011\u0005 after=rs
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.040 s -- in com.jade.brain.CorpusTrainingTest
+[INFO] Running com.jade.brain.BrainMathTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.jade.brain.BrainMathTest
+[INFO] Running com.jade.brain.EnglishCorpusScaleTest
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.817 s -- in com.jade.brain.EnglishCorpusScaleTest
+[INFO] Running com.jade.brain.OptimizerTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.brain.OptimizerTest
+[INFO] Running com.jade.brain.TransformerStackBackwardTest
+STACK_INPUT checked=12 maxAbs=2.172577950876331E-10 maxRelative=1.0866001056470714E-9
+STACK_LAYER_0_WQ checked=16 maxAbs=2.7869409927885284E-10 maxRelative=3.353338153323787E-5
+STACK_LAYER_0_FFN_UP checked=24 maxAbs=3.491724990742351E-10 maxRelative=3.554903175843666E-6
+STACK_LAYER_1_WQ checked=16 maxAbs=1.7165134499502494E-10 maxRelative=2.7287410154246566E-5
+STACK_LAYER_1_FFN_UP checked=24 maxAbs=3.054676425001679E-10 maxRelative=8.171303539684162E-7
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in com.jade.brain.TransformerStackBackwardTest
+[INFO] Running com.jade.brain.BlockBackwardTest
+BLOCK_X checked=12 maxAbs=3.5185938884740864E-10 maxRelative=1.7582494276799624E-9
+BLOCK_ATTENTION_0 checked=16 maxAbs=2.699808656970754E-10 maxRelative=7.153498481544299E-5
+BLOCK_ATTENTION_1 checked=16 maxAbs=2.9201712024730755E-10 maxRelative=1.9587129908829073E-5
+BLOCK_ATTENTION_2 checked=16 maxAbs=4.213251900142545E-10 maxRelative=8.42736132306585E-8
+BLOCK_ATTENTION_3 checked=16 maxAbs=4.0741472955713176E-10 maxRelative=4.90440528249185E-7
+BLOCK_FFN_UP checked=24 maxAbs=3.9458126349645184E-10 maxRelative=1.8668257283264338E-6
+BLOCK_FFN_DOWN checked=24 maxAbs=1.6744934258627886E-10 maxRelative=2.1281653001913332E-8
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.brain.BlockBackwardTest
+[INFO] Running com.jade.brain.AttentionBackwardTest
+ATTENTION_X checked=12 maxAbs=2.9165342016468365E-13 maxRelative=4.227913502867564E-9
+ATTENTION_W0 checked=16 maxAbs=1.7471429779813107E-13 maxRelative=9.883300646286169E-8
+ATTENTION_W1 checked=16 maxAbs=2.4559309113494194E-13 maxRelative=6.771342364791217E-8
+ATTENTION_W2 checked=16 maxAbs=2.2738061433713597E-13 maxRelative=8.573969150341358E-11
+ATTENTION_W3 checked=16 maxAbs=1.5680761810549226E-13 maxRelative=1.3851285951764562E-10
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in com.jade.brain.AttentionBackwardTest
+[INFO] Running com.jade.brain.TrainingStepTest
+TINY_LEARNING initial=1.0817910609486339 final=0.34194833890289716 steps=30
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in com.jade.brain.TrainingStepTest
+[INFO] Running com.jade.brain.CheckpointTest
+CHECKPOINT exactParameters=true exactMoments=true exactTokenizer=true nextForward=true nextUpdate=true bytes=28940
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.068 s -- in com.jade.brain.CheckpointTest
+[INFO] Running com.jade.brain.LanguageModelOutputBackwardTest
+OUTPUT_LAYER_0_WQ checked=4 maxAbs=7.160306882239783E-11 maxRelative=5.736578104155348E-5
+OUTPUT_LAYER_1_WQ checked=4 maxAbs=1.0170355316232189E-10 maxRelative=6.019488999973414E-5
+OUTPUT_LOGITS checked=12 maxAbs=1.024722529052724E-10 maxRelative=4.330539112532732E-10
+OUTPUT_LM_HEAD checked=8 maxAbs=9.565503944486409E-11 maxRelative=8.864773492733044E-10
+OUTPUT_STACK_HIDDEN checked=6 maxAbs=5.086419341271409E-10 maxRelative=2.073328067125079E-9
+OUTPUT_UNIFORM expected=1.3862943611198906 actual=1.3862943611198906
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.brain.LanguageModelOutputBackwardTest
+[INFO] Running com.jade.brain.LmHeadBackwardTest
+CE FINITE DIFFERENCE elements=12 maxAbsoluteError=2.5938196035468764E-10
+LM HEAD WEIGHT FINITE DIFFERENCE parameters=20 maxAbsoluteError=9.184053517685697E-11 maxRelativeError=2.388667226487574E-9
+LM HEAD HIDDEN FINITE DIFFERENCE elements=12 maxAbsoluteError=6.030004967572111E-11
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.brain.LmHeadBackwardTest
+[INFO] Running com.jade.brain.LanguageModelObjectiveTest
+JADE RANDOM TRANSFORMER NEXT-TOKEN LOSS: 2.185037280609549 (not learned language)
+UNIFORM CE expected: 1.3862943611198906; actual: 1.3862943611198906
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.brain.LanguageModelObjectiveTest
+[INFO] Running com.jade.brain.CompleteTokenBackwardTest
+EMBEDDING_ONLY checked=18 maxAbs=4.292360245017335E-9 maxRelative=3.7420022650072497E-10
+COMPLETE_COVERAGE tensors=15/15 scalars=80/80
+EMBEDDING_USED_ONCE checked=2 maxAbs=3.876352017151419E-11 maxRelative=3.182684509944513E-9
+EMBEDDING_REPEATED checked=2 maxAbs=6.718522405080307E-10 maxRelative=2.417931735908016E-9
+EMBEDDING_UNUSED checked=2 maxAbs=0.0 maxRelative=0.0
+COMPLETE_FIRST_BLOCK_WQ checked=4 maxAbs=6.170840572689284E-11 maxRelative=2.6935343460231275E-4
+COMPLETE_LAST_BLOCK_WQ checked=4 maxAbs=1.6619043559471742E-10 maxRelative=0.004738938429497434
+COMPLETE_LM_HEAD checked=8 maxAbs=1.5592305224743086E-10 maxRelative=5.3999611862530494E-9
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.jade.brain.CompleteTokenBackwardTest
+[INFO] Running com.jade.brain.NormFfnBackwardTest
+ACTUAL_FINAL_NORM_HEAD_CE elements=12 maxAbsoluteError=1.0575043618565871E-10
+FFN_INPUT elements=6 maxAbsoluteError=3.953296023873065E-11
+FFN_UP elements=12 maxAbsoluteError=6.404321517550216E-11
+FFN_DOWN elements=12 maxAbsoluteError=2.430497469951831E-11
+RMSNORM elements=6 maxAbsoluteError=9.207742207584246E-11
+RMSNORM_EPSILON_0.2 elements=6 maxAbsoluteError=1.2630599344198856E-10
+GELU elements=7 maxAbsoluteError=3.2690839144461317E-10
+LINEAR_INPUT elements=6 maxAbsoluteError=8.42169389780878E-11
+LINEAR_WEIGHTS elements=6 maxAbsoluteError=7.130182555492581E-11
+FINAL_NORM_HEAD_CE elements=6 maxAbsoluteError=1.193659823761628E-10
+RESIDUAL_FFN elements=6 maxAbsoluteError=6.945000130542667E-11
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.jade.brain.NormFfnBackwardTest
+[INFO] Running com.jade.brain.ByteBpeTokenizerTest
+JADE BYTE-BPE TOKENIZER DEMO
+Base vocabulary: 256
+Target vocabulary: 300
+Final vocabulary: 300
+Learned merges: 44
+rank 0: 100 + 101 -> 256 [0x6465]
+rank 1: 101 + 110 -> 257 [0x656e]
+rank 2: 114 + 97 -> 258 [0x7261]
+rank 3: 97 + 256 -> 259 [0x616465]
+rank 4: 105 + 111 -> 260 [0x696f]
+rank 5: 106 + 259 -> 261 [0x6a616465]
+rank 6: 260 + 110 -> 262 [0x696f6e]
+rank 7: 97 + 103 -> 263 [0x6167]
+rank 8: 97 + 110 -> 264 [0x616e]
+rank 9: 98 + 258 -> 265 [0x627261]
+Sample: JADE 🤖 says: hello jade
+UTF-8 bytes: 26
+BPE token IDs: [74, 65, 68, 69, 32, 240, 159, 164, 150, 32, 115, 97, 121, 115, 58, 32, 280, 283]
+BPE token count: 18
+Decoded: JADE 🤖 says: hello jade
+Exact round trip: YES
+Unknown token required: NO
+External tokenizer: NO
+Downloaded vocabulary: NO
+Downloaded merges: NO
+Compression hello: 1 tokens / 5 bytes
+[INFO] Tests run: 35, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in com.jade.brain.ByteBpeTokenizerTest
+[INFO] Running com.jade.brain.ModelBackwardTest
+MODEL_embedding.weight checked=8 maxAbs=6.718522405080307E-10 maxRelative=3.182684509944513E-9
+MODEL_position.weight checked=8 maxAbs=4.211350157490301E-10 maxRelative=3.182684509944513E-9
+MODEL_blocks.0.attention.q.weight checked=4 maxAbs=6.170840572689284E-11 maxRelative=2.6935343460231275E-4
+MODEL_blocks.0.attention.k.weight checked=4 maxAbs=6.222965720704145E-11 maxRelative=1.5206730662882894E-4
+MODEL_blocks.0.attention.v.weight checked=4 maxAbs=1.2995657241304803E-10 maxRelative=5.641735590892903E-8
+MODEL_blocks.0.attention.out.weight checked=4 maxAbs=9.09774096335969E-11 maxRelative=2.4054724384857304E-7
+MODEL_blocks.0.ffn.up.weight checked=6 maxAbs=1.3098560577113824E-10 maxRelative=6.136916930496686E-7
+MODEL_blocks.0.ffn.down.weight checked=6 maxAbs=8.309207228524018E-11 maxRelative=6.750442281008372E-8
+MODEL_blocks.1.attention.q.weight checked=4 maxAbs=1.6619043559471742E-10 maxRelative=0.004738938429497434
+MODEL_blocks.1.attention.k.weight checked=4 maxAbs=1.2047145887209704E-10 maxRelative=5.784529911118368E-5
+MODEL_blocks.1.attention.v.weight checked=4 maxAbs=9.801066663990554E-11 maxRelative=1.0160164207212903E-7
+MODEL_blocks.1.attention.out.weight checked=4 maxAbs=1.2444703449167316E-10 maxRelative=1.296856825046684E-7
+MODEL_blocks.1.ffn.up.weight checked=6 maxAbs=1.2239222878457703E-10 maxRelative=1.7081712445611901E-6
+MODEL_blocks.1.ffn.down.weight checked=6 maxAbs=9.98725808542926E-11 maxRelative=1.3913324769337198E-6
+MODEL_lmHead.weight checked=8 maxAbs=1.5592305224743086E-10 maxRelative=5.3999611862530494E-9
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.jade.brain.ModelBackwardTest
+[INFO] Running com.jade.services.answer.LocalIntelligenceTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.062 s -- in com.jade.services.answer.LocalIntelligenceTest
+[INFO] Running com.jade.services.answer.UnavailableAnswerServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in com.jade.services.answer.UnavailableAnswerServiceTest
+[INFO] Running com.jade.services.answer.ResearchAnswerServiceTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.jade.services.answer.ResearchAnswerServiceTest
+[INFO] Running com.jade.services.answer.ResponsesProviderTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in com.jade.services.answer.ResponsesProviderTest
+[INFO] Running com.jade.services.answer.RemoteProviderTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.576 s -- in com.jade.services.answer.RemoteProviderTest
+[INFO] Running com.jade.services.answer.PublicWebRetrievalTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in com.jade.services.answer.PublicWebRetrievalTest
+[INFO] Running com.jade.services.app.DesktopAppServiceTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.services.app.DesktopAppServiceTest
+[INFO] Running com.jade.services.search.FileSystemFileSearchServiceTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.038 s -- in com.jade.services.search.FileSystemFileSearchServiceTest
+[INFO] Running com.jade.services.project.MavenDiagnosticsServiceTest
+[Fatal Error] TEST-broken.xml:1:22: XML document structures must start and end within the same entity.
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in com.jade.services.project.MavenDiagnosticsServiceTest
+[INFO] Running com.jade.services.project.MavenProjectProcessRunnerTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.services.project.MavenProjectProcessRunnerTest
+[INFO] Running com.jade.services.project.MavenProjectInspectionServiceTest
+[Fatal Error] pom.xml:1:22: The element type "unclosed" must be terminated by the matching end-tag "</unclosed>".
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.085 s -- in com.jade.services.project.MavenProjectInspectionServiceTest
+[INFO] Running com.jade.services.system.OshiSystemInfoServiceTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in com.jade.services.system.OshiSystemInfoServiceTest
+[INFO] Running com.jade.services.audio.SpeakerProfileStoreTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.services.audio.SpeakerProfileStoreTest
+[INFO] Running com.jade.services.audio.VoiceTranscriptFlowTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 14.10 s -- in com.jade.services.audio.VoiceTranscriptFlowTest
+[INFO] Running com.jade.services.audio.MacSaySpeechSynthesisServiceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in com.jade.services.audio.MacSaySpeechSynthesisServiceTest
+[INFO] Running com.jade.services.audio.TextJsonTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.services.audio.TextJsonTest
+[INFO] Running com.jade.services.audio.SpeakerMatchLogicTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in com.jade.services.audio.SpeakerMatchLogicTest
+[INFO] Running com.jade.services.audio.TranscriptWakePhraseDetectorTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in com.jade.services.audio.TranscriptWakePhraseDetectorTest
+[INFO] Running com.jade.services.audio.GreetingServiceTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in com.jade.services.audio.GreetingServiceTest
+[INFO] Running com.jade.services.history.SqliteHistoryRepositoryTest
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.045 s -- in com.jade.services.history.SqliteHistoryRepositoryTest
+[INFO] Running com.jade.services.files.ScopedFileMutationServiceTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in com.jade.services.files.ScopedFileMutationServiceTest
+[INFO]
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 508, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO]
+[INFO] --- jar:3.5.0:jar (default-jar) @ jade ---
+[INFO] Building jar: /Users/soham/college/second year/java /java project/jarvis-integration/jarvis-integration/target/jade.jar
+[INFO]
+[INFO] --- shade:3.6.1:shade (default) @ jade ---
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] Discovered module-info.class. Shading will break its strong encapsulation.
+[WARNING] jai-imageio-core-1.4.0.jar, jbig2-imageio-3.0.4.jar define 1 overlapping resource:
+[WARNING]   - META-INF/services/javax.imageio.spi.ImageReaderSpi
+[WARNING] poi-5.2.3.jar, poi-ooxml-5.2.3.jar, poi-scratchpad-5.2.3.jar define 2 overlapping resources:
+[WARNING]   - META-INF/services/org.apache.poi.extractor.ExtractorProvider
+[WARNING]   - META-INF/services/org.apache.poi.sl.draw.ImageRenderer
+[WARNING] javafx-controls-21.0.10-mac-aarch64.jar, javafx-graphics-21.0.10-mac-aarch64.jar define 4 overlapping resources:
+[WARNING]   - META-INF/substrate/config/reflectionconfig-aarch64-android.json
+[WARNING]   - META-INF/substrate/config/reflectionconfig-arm64-ios.json
+[WARNING]   - META-INF/substrate/config/reflectionconfig-x86_64-ios.json
+[WARNING]   - META-INF/substrate/config/resourcebundles
+[WARNING] tika-parser-apple-module-2.8.0.jar, tika-parser-microsoft-module-2.8.0.jar, tika-parser-zip-commons-2.8.0.jar define 1 overlapping resource:
+[WARNING]   - META-INF/services/org.apache.tika.detect.zip.ZipContainerDetector
+[WARNING] tika-parser-html-module-2.8.0.jar, tika-parser-text-module-2.8.0.jar define 1 overlapping resource:
+[WARNING]   - META-INF/services/org.apache.tika.detect.EncodingDetector
+[WARNING] apache-mime4j-core-0.8.9.jar, apache-mime4j-dom-0.8.9.jar, fontbox-2.0.28.jar, jackson-annotations-2.15.0.jar, jackson-core-2.15.0.jar, jackson-databind-2.15.0.jar, jai-imageio-core-1.4.0.jar, jbig2-imageio-3.0.4.jar, jempbox-1.8.17.jar, jna-5.17.0.jar, jna-platform-5.17.0.jar, log4j-api-2.18.0.jar, pdfbox-2.0.28.jar, pdfbox-tools-2.0.28.jar, poi-5.2.3.jar, poi-ooxml-5.2.3.jar, poi-ooxml-lite-5.2.3.jar, poi-scratchpad-5.2.3.jar, tika-core-2.8.0.jar, tika-parser-apple-module-2.8.0.jar, tika-parser-audiovideo-module-2.8.0.jar, tika-parser-cad-module-2.8.0.jar, tika-parser-code-module-2.8.0.jar, tika-parser-crypto-module-2.8.0.jar, tika-parser-digest-commons-2.8.0.jar, tika-parser-font-module-2.8.0.jar, tika-parser-html-module-2.8.0.jar, tika-parser-image-module-2.8.0.jar, tika-parser-mail-commons-2.8.0.jar, tika-parser-mail-module-2.8.0.jar, tika-parser-microsoft-module-2.8.0.jar, tika-parser-miscoffice-module-2.8.0.jar, tika-parser-news-module-2.8.0.jar, tika-parser-ocr-module-2.8.0.jar, tika-parser-pdf-module-2.8.0.jar, tika-parser-pkg-module-2.8.0.jar, tika-parser-text-module-2.8.0.jar, tika-parser-webarchive-module-2.8.0.jar, tika-parser-xml-module-2.8.0.jar, tika-parser-xmp-commons-2.8.0.jar, tika-parser-zip-commons-2.8.0.jar, tika-parsers-standard-package-2.8.0.jar, vorbis-java-core-0.8.jar, vorbis-java-tika-0.8.jar, xercesImpl-2.12.2.jar, xmpbox-2.0.28.jar define 1 overlapping resource:
+[WARNING]   - META-INF/LICENSE
+[WARNING] javafx-base-21.0.10-mac-aarch64.jar, javafx-controls-21.0.10-mac-aarch64.jar, javafx-graphics-21.0.10-mac-aarch64.jar define 1 overlapping resource:
+[WARNING]   - META-INF/substrate/config/reflectionconfig.json
+[WARNING] poi-ooxml-5.2.3.jar, poi-scratchpad-5.2.3.jar define 1 overlapping resource:
+[WARNING]   - META-INF/services/org.apache.poi.sl.usermodel.SlideShowProvider
+[WARNING] apache-mime4j-core-0.8.9.jar, apache-mime4j-dom-0.8.9.jar, fontbox-2.0.28.jar, jackson-annotations-2.15.0.jar, jackson-core-2.15.0.jar, jackson-databind-2.15.0.jar, jai-imageio-core-1.4.0.jar, jbig2-imageio-3.0.4.jar, jempbox-1.8.17.jar, log4j-api-2.18.0.jar, pdfbox-2.0.28.jar, pdfbox-tools-2.0.28.jar, poi-5.2.3.jar, poi-ooxml-5.2.3.jar, poi-ooxml-lite-5.2.3.jar, poi-scratchpad-5.2.3.jar, tika-core-2.8.0.jar, tika-parser-apple-module-2.8.0.jar, tika-parser-audiovideo-module-2.8.0.jar, tika-parser-cad-module-2.8.0.jar, tika-parser-code-module-2.8.0.jar, tika-parser-crypto-module-2.8.0.jar, tika-parser-digest-commons-2.8.0.jar, tika-parser-font-module-2.8.0.jar, tika-parser-html-module-2.8.0.jar, tika-parser-image-module-2.8.0.jar, tika-parser-mail-commons-2.8.0.jar, tika-parser-mail-module-2.8.0.jar, tika-parser-microsoft-module-2.8.0.jar, tika-parser-miscoffice-module-2.8.0.jar, tika-parser-news-module-2.8.0.jar, tika-parser-ocr-module-2.8.0.jar, tika-parser-pdf-module-2.8.0.jar, tika-parser-pkg-module-2.8.0.jar, tika-parser-text-module-2.8.0.jar, tika-parser-webarchive-module-2.8.0.jar, tika-parser-xml-module-2.8.0.jar, tika-parser-xmp-commons-2.8.0.jar, tika-parser-zip-commons-2.8.0.jar, tika-parsers-standard-package-2.8.0.jar, xercesImpl-2.12.2.jar, xmpbox-2.0.28.jar define 1 overlapping resource:
+[WARNING]   - META-INF/NOTICE
+[WARNING] jna-5.17.0.jar, jna-platform-5.17.0.jar define 2 overlapping resources:
+[WARNING]   - META-INF/AL2.0
+[WARNING]   - META-INF/LGPL2.1
+[WARNING] apache-mime4j-core-0.8.9.jar, apache-mime4j-dom-0.8.9.jar, fontbox-2.0.28.jar, jbig2-imageio-3.0.4.jar, jempbox-1.8.17.jar, log4j-api-2.18.0.jar, pdfbox-2.0.28.jar, pdfbox-tools-2.0.28.jar, tika-core-2.8.0.jar, tika-parser-apple-module-2.8.0.jar, tika-parser-audiovideo-module-2.8.0.jar, tika-parser-cad-module-2.8.0.jar, tika-parser-code-module-2.8.0.jar, tika-parser-crypto-module-2.8.0.jar, tika-parser-digest-commons-2.8.0.jar, tika-parser-font-module-2.8.0.jar, tika-parser-html-module-2.8.0.jar, tika-parser-image-module-2.8.0.jar, tika-parser-mail-commons-2.8.0.jar, tika-parser-mail-module-2.8.0.jar, tika-parser-microsoft-module-2.8.0.jar, tika-parser-miscoffice-module-2.8.0.jar, tika-parser-news-module-2.8.0.jar, tika-parser-ocr-module-2.8.0.jar, tika-parser-pdf-module-2.8.0.jar, tika-parser-pkg-module-2.8.0.jar, tika-parser-text-module-2.8.0.jar, tika-parser-webarchive-module-2.8.0.jar, tika-parser-xml-module-2.8.0.jar, tika-parser-xmp-commons-2.8.0.jar, tika-parser-zip-commons-2.8.0.jar, tika-parsers-standard-package-2.8.0.jar, xmpbox-2.0.28.jar define 1 overlapping resource:
+[WARNING]   - META-INF/DEPENDENCIES
+[WARNING] SparseBitSet-1.2.jar, apache-mime4j-core-0.8.9.jar, apache-mime4j-dom-0.8.9.jar, asm-9.5.jar, bcmail-jdk18on-1.73.jar, bcpkix-jdk18on-1.73.jar, bcprov-jdk18on-1.73.jar, bcutil-jdk18on-1.73.jar, commons-codec-1.15.jar, commons-collections4-4.4.jar, commons-compress-1.23.0.jar, commons-csv-1.10.0.jar, commons-exec-1.3.jar, commons-io-2.11.0.jar, commons-lang3-3.12.0.jar, commons-logging-1.2.jar, commons-math3-3.6.1.jar, curvesapi-1.07.jar, dd-plist-1.27.jar, dec-0.1.2.jar, fontbox-2.0.28.jar, istack-commons-runtime-3.0.12.jar, jackcess-4.0.5.jar, jackcess-encrypt-4.0.2.jar, jackson-annotations-2.15.0.jar, jackson-core-2.15.0.jar, jackson-databind-2.15.0.jar, jade.jar, jai-imageio-core-1.4.0.jar, jakarta.activation-1.2.2.jar, jakarta.xml.bind-api-2.3.3.jar, java-libpst-0.9.3.jar, javafx-base-21.0.10-mac-aarch64.jar, javafx-base-21.0.10.jar, javafx-controls-21.0.10-mac-aarch64.jar, javafx-controls-21.0.10.jar, javafx-graphics-21.0.10-mac-aarch64.jar, javafx-graphics-21.0.10.jar, jaxb-runtime-2.3.6.jar, jbig2-imageio-3.0.4.jar, jcl-over-slf4j-2.0.7.jar, jdom2-2.0.6.1.jar, jempbox-1.8.17.jar, jhighlight-1.1.0.jar, jmatio-1.5.jar, jna-5.17.0.jar, jna-platform-5.17.0.jar, juniversalchardet-2.4.0.jar, junrar-7.5.4.jar, jwarc-0.21.0.jar, log4j-api-2.18.0.jar, metadata-extractor-2.18.0.jar, oshi-core-6.8.3.jar, parso-2.0.14.jar, pdfbox-2.0.28.jar, pdfbox-tools-2.0.28.jar, poi-5.2.3.jar, poi-ooxml-5.2.3.jar, poi-ooxml-lite-5.2.3.jar, poi-scratchpad-5.2.3.jar, rome-1.19.0.jar, rome-utils-1.19.0.jar, slf4j-api-2.0.17.jar, sqlite-jdbc-3.53.4.0.jar, tagsoup-1.2.1.jar, tika-core-2.8.0.jar, tika-parser-apple-module-2.8.0.jar, tika-parser-audiovideo-module-2.8.0.jar, tika-parser-cad-module-2.8.0.jar, tika-parser-code-module-2.8.0.jar, tika-parser-crypto-module-2.8.0.jar, tika-parser-digest-commons-2.8.0.jar, tika-parser-font-module-2.8.0.jar, tika-parser-html-module-2.8.0.jar, tika-parser-image-module-2.8.0.jar, tika-parser-mail-commons-2.8.0.jar, tika-parser-mail-module-2.8.0.jar, tika-parser-microsoft-module-2.8.0.jar, tika-parser-miscoffice-module-2.8.0.jar, tika-parser-news-module-2.8.0.jar, tika-parser-ocr-module-2.8.0.jar, tika-parser-pdf-module-2.8.0.jar, tika-parser-pkg-module-2.8.0.jar, tika-parser-text-module-2.8.0.jar, tika-parser-webarchive-module-2.8.0.jar, tika-parser-xml-module-2.8.0.jar, tika-parser-xmp-commons-2.8.0.jar, tika-parser-zip-commons-2.8.0.jar, tika-parsers-standard-package-2.8.0.jar, txw2-2.3.6.jar, vorbis-java-core-0.8.jar, vorbis-java-tika-0.8.jar, vosk-0.3.38.jar, xercesImpl-2.12.2.jar, xml-apis-1.4.01.jar, xmlbeans-5.1.1.jar, xmpbox-2.0.28.jar, xmpcore-6.1.11.jar, xz-1.9.jar define 1 overlapping resource:
+[WARNING]   - META-INF/MANIFEST.MF
+[WARNING] commons-codec-1.15.jar, commons-collections4-4.4.jar, commons-compress-1.23.0.jar, commons-csv-1.10.0.jar, commons-exec-1.3.jar, commons-io-2.11.0.jar, commons-lang3-3.12.0.jar, commons-logging-1.2.jar, commons-math3-3.6.1.jar define 1 overlapping resource:
+[WARNING]   - META-INF/NOTICE.txt
+[WARNING] poi-5.2.3.jar, poi-ooxml-5.2.3.jar define 1 overlapping resource:
+[WARNING]   - META-INF/services/org.apache.poi.ss.usermodel.WorkbookProvider
+[WARNING] bcmail-jdk18on-1.73.jar, bcpkix-jdk18on-1.73.jar, bcprov-jdk18on-1.73.jar, bcutil-jdk18on-1.73.jar, jackson-core-2.15.0.jar, jackson-databind-2.15.0.jar, jcl-over-slf4j-2.0.7.jar, log4j-api-2.18.0.jar, poi-5.2.3.jar, poi-ooxml-5.2.3.jar, poi-ooxml-lite-5.2.3.jar, poi-scratchpad-5.2.3.jar, slf4j-api-2.0.17.jar, sqlite-jdbc-3.53.4.0.jar, xmlbeans-5.1.1.jar, xz-1.9.jar define 1 overlapping classes:
+[WARNING]   - META-INF.versions.9.module-info
+[WARNING] commons-codec-1.15.jar, commons-collections4-4.4.jar, commons-compress-1.23.0.jar, commons-csv-1.10.0.jar, commons-exec-1.3.jar, commons-io-2.11.0.jar, commons-lang3-3.12.0.jar, commons-logging-1.2.jar, commons-math3-3.6.1.jar, jcl-over-slf4j-2.0.7.jar, jdom2-2.0.6.1.jar, slf4j-api-2.0.17.jar define 1 overlapping resource:
+[WARNING]   - META-INF/LICENSE.txt
+[WARNING] istack-commons-runtime-3.0.12.jar, jakarta.activation-1.2.2.jar, jakarta.xml.bind-api-2.3.3.jar, jaxb-runtime-2.3.6.jar, txw2-2.3.6.jar define 2 overlapping resources:
+[WARNING]   - META-INF/LICENSE.md
+[WARNING]   - META-INF/NOTICE.md
+[WARNING] commons-logging-1.2.jar, jcl-over-slf4j-2.0.7.jar define 5 overlapping classes:
+[WARNING]   - org.apache.commons.logging.Log
+[WARNING]   - org.apache.commons.logging.LogConfigurationException
+[WARNING]   - org.apache.commons.logging.LogFactory
+[WARNING]   - org.apache.commons.logging.impl.NoOpLog
+[WARNING]   - org.apache.commons.logging.impl.SimpleLog
+[WARNING] maven-shade-plugin has detected that some files are
+[WARNING] present in two or more JARs. When this happens, only one
+[WARNING] single version of the file is copied to the uber jar.
+[WARNING] Usually this is not harmful and you can skip these warnings,
+[WARNING] otherwise try to manually exclude artifacts based on
+[WARNING] mvn dependency:tree -Ddetail=true and the above output.
+[WARNING] See https://maven.apache.org/plugins/maven-shade-plugin/
+[INFO] Replacing original artifact with shaded artifact.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  42.563 s
+[INFO] Finished at: 2026-10-01T00:59:20+05:30
+[INFO] ------------------------------------------------------------------------

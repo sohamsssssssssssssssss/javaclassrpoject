@@ -1,0 +1,37 @@
+ M .gitignore
+ M jade-engine/CMakeLists.txt
+ M jade-engine/benchmarks/bench.cpp
+ M jade-engine/include/jade/engine.hpp
+ M jade-engine/src/engine.cpp
+ M jade-engine/src/gemm.cpp
+ M jade-engine/tests/test_engine.cpp
+?? ../docs/
+?? ../jade-engine/
+?? data/
+?? docs/chat-baseline-50m/
+?? docs/engine-v2/REPORT.md
+?? docs/engine-v2/cmake-final.txt
+?? docs/engine-v2/ctest-final.txt
+?? docs/engine-v2/git-diff-check.txt
+?? docs/engine-v2/git-status-final.txt
+?? docs/engine-v2/maven-package.txt
+?? docs/loop-6b/
+?? docs/loop-6c/
+?? docs/loop-6d/
+?? docs/pretraining-v1/
+?? jade-engine/benchmarks/smoke20m.cpp
+?? jade-engine/benchmarks/smoke50m.cpp
+?? jade-engine/data/
+?? jade-engine/docs/
+?? jade-engine/include/jade/dataset.hpp
+?? jade-engine/include/jade/tokenizer.hpp
+?? jade-engine/include/jade/training.hpp
+?? jade-engine/src/chat.cpp
+?? jade-engine/src/dataset.cpp
+?? jade-engine/src/pretrain.cpp
+?? jade-engine/src/training.cpp
+?? jade-engine/tests/test_pretraining.cpp
+?? src/main/java/com/jade/brain/tokenizer/TokenizerArtifact.java
+?? src/main/java/com/jade/brain/training/PretrainingDataset.java
+?? src/test/java/com/jade/brain/PretrainingPipelineTest.java
+?? ../run-chat.sh

@@ -1,0 +1,4 @@
+V=1024 C=32 D=448 H=8 L=8 F=1792 parameters=20199424
+parameterBytes=80797696 gradientBytes=80797696 firstMomentBytes=80797696 secondMomentBytes=80797696 persistentBytes=323190784 workspaceBytes=10133632 checkpointBytes=242393156
+estimatedTrainingRss=340697088 estimatedLoadRss=583090176 measured5MNonTensorOverhead=7372672
+projectionWeightsPerPosition=19726336

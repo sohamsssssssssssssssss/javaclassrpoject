@@ -1,0 +1,19 @@
+ M jade-engine/CMakeLists.txt
+ M jade-engine/benchmarks/bench.cpp
+ M jade-engine/include/jade/engine.hpp
+ M jade-engine/src/engine.cpp
+ M jade-engine/src/gemm.cpp
+ M jade-engine/tests/test_engine.cpp
+?? ../docs/
+?? ../jade-engine/
+?? docs/engine-v2/REPORT.md
+?? docs/engine-v2/cmake-final.txt
+?? docs/engine-v2/ctest-final.txt
+?? docs/engine-v2/git-diff-check.txt
+?? docs/engine-v2/git-status-final.txt
+?? docs/engine-v2/maven-package.txt
+?? docs/loop-6b/
+?? docs/loop-6c/
+?? docs/loop-6d/
+?? jade-engine/benchmarks/smoke20m.cpp
+?? jade-engine/benchmarks/smoke50m.cpp

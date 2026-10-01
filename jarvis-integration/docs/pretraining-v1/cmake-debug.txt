@@ -1,0 +1,37 @@
+-- The CXX compiler identification is AppleClang 21.0.0.21000334
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (0.4s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/soham/college/second year/java /java project/jarvis-integration/jarvis-integration/target/jade-engine-debug
+[ 20%] Building CXX object CMakeFiles/jade_engine.dir/src/engine.cpp.o
+[ 20%] Building CXX object CMakeFiles/jade_engine.dir/src/gemm.cpp.o
+[ 20%] Building CXX object CMakeFiles/jade_engine.dir/src/checkpoint.cpp.o
+[ 20%] Building CXX object CMakeFiles/jade_engine.dir/src/dataset.cpp.o
+[ 25%] Building CXX object CMakeFiles/jade_engine.dir/src/training.cpp.o
+[ 30%] Linking CXX static library libjade_engine.a
+[ 30%] Built target jade_engine
+[ 50%] Building CXX object CMakeFiles/jade_engine_50m_smoke.dir/benchmarks/smoke50m.cpp.o
+[ 50%] Building CXX object CMakeFiles/jade_engine_20m_smoke.dir/benchmarks/smoke20m.cpp.o
+[ 50%] Building CXX object CMakeFiles/jade_engine_tests.dir/tests/test_engine.cpp.o
+[ 50%] Building CXX object CMakeFiles/jade_engine_bench.dir/benchmarks/bench.cpp.o
+[ 60%] Linking CXX executable jade_engine_50m_smoke
+[ 60%] Linking CXX executable jade_engine_20m_smoke
+[ 65%] Linking CXX executable jade_engine_bench
+[ 65%] Built target jade_engine_50m_smoke
+[ 65%] Built target jade_engine_20m_smoke
+[ 65%] Built target jade_engine_bench
+[ 75%] Building CXX object CMakeFiles/jade_chat.dir/src/chat.cpp.o
+[ 75%] Building CXX object CMakeFiles/jade_pretraining_tests.dir/tests/test_pretraining.cpp.o
+[ 80%] Building CXX object CMakeFiles/jade_pretrain.dir/src/pretrain.cpp.o
+[ 85%] Linking CXX executable jade_engine_tests
+[ 85%] Built target jade_engine_tests
+[ 90%] Linking CXX executable jade_chat
+[ 95%] Linking CXX executable jade_pretraining_tests
+[ 95%] Built target jade_chat
+[100%] Linking CXX executable jade_pretrain
+[100%] Built target jade_pretraining_tests
+[100%] Built target jade_pretrain

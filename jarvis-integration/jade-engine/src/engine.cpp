@@ -1,19 +1,54 @@
 #include "jade/engine.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <limits>
 #include <random>
 #include <stdexcept>
+#include <sys/resource.h>
+#ifdef __APPLE__
+#include <mach/mach.h>
+#endif
 
 namespace jade {
+namespace {
+std::uint64_t now_ns(){return std::chrono::duration_cast<std::chrono::nanoseconds>(
+    std::chrono::steady_clock::now().time_since_epoch()).count();}
+std::uint64_t current_rss(){
+#ifdef __APPLE__
+    mach_task_basic_info_data_t info{};mach_msg_type_number_t count=MACH_TASK_BASIC_INFO_COUNT;
+    if(task_info(mach_task_self(),MACH_TASK_BASIC_INFO,reinterpret_cast<task_info_t>(&info),&count)==KERN_SUCCESS)
+        return info.resident_size;
+#endif
+    rusage usage{};getrusage(RUSAGE_SELF,&usage);
+#ifdef __APPLE__
+    return usage.ru_maxrss;
+#else
+    return std::uint64_t(usage.ru_maxrss)*1024;
+#endif
+}
+Config preflight(Config config,const EngineeringLimits& limits,ConstructionRss* rss){
+    plan_memory(config,limits); // Before any parameter, optimizer or workspace allocation.
+    if(rss)rss->before_model=current_rss();
+    return config;
+}
+Tensor stage_tensor(std::size_t rows,std::size_t columns,std::uint64_t* rss){
+    Tensor result(rows,columns);
+    if(rss)*rss=current_rss();
+    return result;
+}
+}
+
 Engine::Layer::Layer(int c,int d,int h,int f):
     norm1(c,d),q(c,d),k(c,d),v(c,d),scores(h*c,c),probabilities(h*c,c),
     joined(c,d),projection(c,d),residual(c,d),norm2(c,d),pre_gelu(c,f),
     gelu_value(c,f),ffn_output(c,d){}
 
-Engine::Engine(Config c,Backend backend,std::uint64_t seed):config_(c),backend_(backend),
-    parameters_(1,c.parameter_count()),gradients_(1,c.parameter_count()),
-    first_(1,c.parameter_count()),second_(1,c.parameter_count()),
+Engine::Engine(Config c,Backend backend,std::uint64_t seed,EngineeringLimits limits,ConstructionRss* rss):
+    config_(preflight(c,limits,rss)),backend_(backend),
+    parameters_(stage_tensor(1,c.parameter_count(limits),rss?&rss->after_parameters:nullptr)),
+    gradients_(1,c.parameter_count(limits)),first_(1,c.parameter_count(limits)),
+    second_(stage_tensor(1,c.parameter_count(limits),rss?&rss->after_optimizer:nullptr)),
     final_norm_(c.context,c.width),logits_(c.context,c.vocab),d_logits_(c.context,c.vocab),
     d_state_(c.context,c.width),d_next_(c.context,c.width),d_residual_(c.context,c.width),
     d_joined_(c.context,c.width),d_q_(c.context,c.width),d_k_(c.context,c.width),
@@ -40,6 +75,7 @@ Engine::Engine(Config c,Backend backend,std::uint64_t seed):config_(c),backend_(
     for(int l=0;l<=c.layers;l++)states_.emplace_back(c.context,c.width);
     cache_.reserve(c.layers);
     for(int l=0;l<c.layers;l++)cache_.emplace_back(c.context,c.width,c.heads,c.ffn);
+    if(rss)rss->after_workspace=current_rss();
     std::mt19937_64 rng(seed);
     std::normal_distribution<float> normal(0.f,.02f);
     for(std::size_t i=0;i<parameters_.size();i++)parameters_.data()[i]=normal(rng);
@@ -58,9 +94,14 @@ std::size_t Engine::workspace_bytes() const {
         layer.residual.size()+layer.norm2.size()+layer.pre_gelu.size()+layer.gelu_value.size()+layer.ffn_output.size();
     return elements*sizeof(float);
 }
-void Engine::zero_grad(){gradients_.fill(0);}
+void Engine::zero_grad(){
+    const auto start=profiling_?now_ns():0;
+    gradients_.fill(0);
+    if(profiling_)profile_.zero_ns+=now_ns()-start;
+}
 
 void Engine::forward_hidden(const int* input,int t){
+    const auto start=profiling_?now_ns():0;
     const int d=config_.width,f=config_.ffn,c=config_.context,h=config_.heads,head_dim=d/h;
     if(!input||t<1||t>c)throw std::invalid_argument("Invalid JADE context");
     float* state=states_[0].data();
@@ -106,9 +147,11 @@ void Engine::forward_hidden(const int* input,int t){
     }
     rmsnorm(states_.back().data(),final_norm_.data(),t,d);
     gemm(backend_,false,false,t,config_.vocab,d,final_norm_.data(),parameters_.data()+head_offset_,logits_.data());
+    if(profiling_)profile_.forward_ns+=now_ns()-start;
 }
 float Engine::forward_loss(const int* input,const int* target,int t){
     forward_hidden(input,t);
+    const auto start=profiling_?now_ns():0;
     if(!target)throw std::invalid_argument("Missing targets");
     double total=0;
     for(int i=0;i<t;i++){
@@ -121,11 +164,19 @@ float Engine::forward_loss(const int* input,const int* target,int t){
     }
     const float loss=float(total/t);
     if(!std::isfinite(loss))throw std::runtime_error("Nonfinite JADE loss");
+    if(profiling_)profile_.loss_ns+=now_ns()-start;
     return loss;
 }
 
 float Engine::backward(const int* input,const int* target,int t){
     const float loss=forward_loss(input,target,t);
+    const auto backward_start=profiling_?now_ns():0;
+    const auto accumulation_before=profile_.grad_accum_ns;
+    auto grad_gemm=[&](bool ta,bool tb,int m,int n,int k,const float* a,const float* b,float* out,float alpha,float beta){
+        const auto start=profiling_?now_ns():0;
+        gemm(backend_,ta,tb,m,n,k,a,b,out,alpha,beta);
+        if(profiling_)profile_.grad_accum_ns+=now_ns()-start;
+    };
     const int d=config_.width,f=config_.ffn,c=config_.context,h=config_.heads,vocab=config_.vocab,head_dim=d/h;
     last_length_=t;
     for(int i=0;i<t;i++){
@@ -134,22 +185,22 @@ float Engine::backward(const int* input,const int* target,int t){
         row[target[i]]-=1;
         for(int j=0;j<vocab;j++)row[j]/=t;
     }
-    gemm(backend_,true,false,d,vocab,t,final_norm_.data(),d_logits_.data(),
+    grad_gemm(true,false,d,vocab,t,final_norm_.data(),d_logits_.data(),
          gradients_.data()+head_offset_,1,1);
     gemm(backend_,false,true,t,d,vocab,d_logits_.data(),parameters_.data()+head_offset_,d_hidden_.data());
     rmsnorm_backward(states_.back().data(),d_hidden_.data(),d_state_.data(),t,d);
     for(int l=config_.layers-1;l>=0;l--){
         auto& a=cache_[l];const auto& off=block_offsets_[l];
         const float* x=states_[l].data();
-        gemm(backend_,true,false,f,d,t,a.gelu_value.data(),d_state_.data(),gradients_.data()+off[5],1,1);
+        grad_gemm(true,false,f,d,t,a.gelu_value.data(),d_state_.data(),gradients_.data()+off[5],1,1);
         gemm(backend_,false,true,t,f,d,d_state_.data(),parameters_.data()+off[5],d_ffn_.data());
         for(int i=0;i<t*f;i++)d_pre_.data()[i]=d_ffn_.data()[i]*gelu_derivative(a.pre_gelu.data()[i]);
-        gemm(backend_,true,false,d,f,t,a.norm2.data(),d_pre_.data(),gradients_.data()+off[4],1,1);
+        grad_gemm(true,false,d,f,t,a.norm2.data(),d_pre_.data(),gradients_.data()+off[4],1,1);
         gemm(backend_,false,true,t,d,f,d_pre_.data(),parameters_.data()+off[4],d_norm_.data());
         rmsnorm_backward(a.residual.data(),d_norm_.data(),d_next_.data(),t,d);
         for(int i=0;i<t*d;i++)d_residual_.data()[i]=d_state_.data()[i]+d_next_.data()[i];
 
-        gemm(backend_,true,false,d,d,t,a.joined.data(),d_residual_.data(),gradients_.data()+off[3],1,1);
+        grad_gemm(true,false,d,d,t,a.joined.data(),d_residual_.data(),gradients_.data()+off[3],1,1);
         gemm(backend_,false,true,t,d,d,d_residual_.data(),parameters_.data()+off[3],d_joined_.data());
         d_q_.fill(0);d_k_.fill(0);d_v_.fill(0);
         for(int head=0;head<h;head++)for(int i=0;i<t;i++){
@@ -174,19 +225,24 @@ float Engine::backward(const int* input,const int* target,int t){
                 }
             }
         }
-        gemm(backend_,true,false,d,d,t,a.norm1.data(),d_q_.data(),gradients_.data()+off[0],1,1);
-        gemm(backend_,true,false,d,d,t,a.norm1.data(),d_k_.data(),gradients_.data()+off[1],1,1);
-        gemm(backend_,true,false,d,d,t,a.norm1.data(),d_v_.data(),gradients_.data()+off[2],1,1);
+        grad_gemm(true,false,d,d,t,a.norm1.data(),d_q_.data(),gradients_.data()+off[0],1,1);
+        grad_gemm(true,false,d,d,t,a.norm1.data(),d_k_.data(),gradients_.data()+off[1],1,1);
+        grad_gemm(true,false,d,d,t,a.norm1.data(),d_v_.data(),gradients_.data()+off[2],1,1);
         gemm(backend_,false,true,t,d,d,d_q_.data(),parameters_.data()+off[0],d_norm_.data());
         gemm(backend_,false,true,t,d,d,d_k_.data(),parameters_.data()+off[1],d_norm_.data(),1,1);
         gemm(backend_,false,true,t,d,d,d_v_.data(),parameters_.data()+off[2],d_norm_.data(),1,1);
         rmsnorm_backward(x,d_norm_.data(),d_next_.data(),t,d);
         for(int i=0;i<t*d;i++)d_state_.data()[i]=d_residual_.data()[i]+d_next_.data()[i];
     }
+    const auto scatter_start=profiling_?now_ns():0;
     for(int i=0;i<t;i++)for(int j=0;j<d;j++){
         const float upstream=d_state_.data()[i*d+j];
         gradients_.data()[embedding_offset_+std::size_t(input[i])*d+j]+=upstream;
         gradients_.data()[position_offset_+i*d+j]+=upstream;
+    }
+    if(profiling_){
+        profile_.grad_accum_ns+=now_ns()-scatter_start;
+        profile_.backward_ns+=now_ns()-backward_start-(profile_.grad_accum_ns-accumulation_before);
     }
     return loss;
 }
@@ -197,28 +253,39 @@ void Engine::adamw(const AdamWConfig& s,int examples){
        s.beta2<0||s.beta2>=1||s.epsilon<=0||s.decay<0||s.clip<0)
         throw std::invalid_argument("Invalid AdamW step");
     const std::size_t n=parameters_.size();
-    double squared=0;
+    const double inverse_examples=1.0/examples;
+    const auto norm_start=profiling_?now_ns():0;
+    double squared_lanes[4]{};
     for(std::size_t i=0;i<n;i++){
-        const double value=double(gradients_.data()[i])/examples;
+        const double value=double(gradients_.data()[i])*inverse_examples;
         if(!std::isfinite(value))throw std::runtime_error("Nonfinite gradient");
-        squared+=value*value;
+        squared_lanes[i&3]+=value*value;
     }
-    const double norm=std::sqrt(squared),clip=s.clip>0&&norm>s.clip?s.clip/norm:1;
+    const double squared=(squared_lanes[0]+squared_lanes[1])+(squared_lanes[2]+squared_lanes[3]);
+    const double norm=std::sqrt(squared);
+    const auto clip_start=profiling_?now_ns():0;
+    const double clip=s.clip>0&&norm>s.clip?s.clip/norm:1;
+    if(!std::isfinite(norm)||!std::isfinite(clip))throw std::runtime_error("Nonfinite gradient norm or clip factor");
+    if(profiling_){profile_.grad_norm_ns+=clip_start-norm_start;profile_.clip_ns+=now_ns()-clip_start;}
     if(steps_==std::numeric_limits<std::uint64_t>::max()||
        std::uint64_t(examples)*last_length_>std::numeric_limits<std::uint64_t>::max()-positions_)
         throw std::overflow_error("Training counter overflow");
     const auto next_step=steps_+1;
     const double bias1=1-std::pow(s.beta1,double(next_step)),bias2=1-std::pow(s.beta2,double(next_step));
+    const double inverse_bias1=1.0/bias1,inverse_bias2=1.0/bias2;
+    const auto update_start=profiling_?now_ns():0;
     for(std::size_t i=0;i<n;i++){
-        const float old=parameters_.data()[i],g=float((double(gradients_.data()[i])/examples)*clip);
+        const float old=parameters_.data()[i],g=float(double(gradients_.data()[i])*inverse_examples*clip);
         const float m=first_.data()[i]=s.beta1*first_.data()[i]+(1-s.beta1)*g;
         const float v=second_.data()[i]=s.beta2*second_.data()[i]+(1-s.beta2)*g*g;
-        const float updated=old-s.learning_rate*float((m/bias1)/(std::sqrt(v/bias2)+s.epsilon))
+        const float updated=old-s.learning_rate*float((m*inverse_bias1)/(std::sqrt(v*inverse_bias2)+s.epsilon))
                 -s.learning_rate*s.decay*old;
         if(!std::isfinite(updated)||!std::isfinite(m)||!std::isfinite(v))
             throw std::runtime_error("Nonfinite AdamW state");
         parameters_.data()[i]=updated;
     }
+    last_gradient_norm_=norm;last_clip_factor_=clip;
+    if(profiling_)profile_.adamw_update_ns+=now_ns()-update_start;
     steps_=next_step;positions_+=std::uint64_t(examples)*last_length_;
 }
 std::vector<int> Engine::generate(const std::vector<int>& prompt,int new_tokens){
@@ -229,6 +296,41 @@ std::vector<int> Engine::generate(const std::vector<int>& prompt,int new_tokens)
         const float* row=logits_.data()+(all.size()-1)*config_.vocab;
         int best=0;for(int i=1;i<config_.vocab;i++)if(row[i]>row[best])best=i;
         all.push_back(best);output.push_back(best);
+    }
+    return output;
+}
+std::vector<int> Engine::generate(const std::vector<int>& prompt,int new_tokens,float temperature,int top_k,std::uint64_t seed){
+    if(prompt.empty()||int(prompt.size())>config_.context||new_tokens<0)throw std::invalid_argument("Invalid generation request");
+    if(temperature<=0.f||top_k<=1)return generate(prompt,new_tokens);
+    std::mt19937_64 rng(seed);
+    std::uniform_real_distribution<float> dist(0.f,1.f);
+    std::vector<int> all=prompt,output;
+    std::vector<std::pair<float,int>> candidates(config_.vocab);
+    while(int(output.size())<new_tokens&&int(all.size())<config_.context){
+        forward_hidden(all.data(),int(all.size()));
+        const float* row=logits_.data()+(all.size()-1)*config_.vocab;
+        for(int i=0;i<config_.vocab;i++)candidates[i]={row[i]/temperature,i};
+        int k=std::min(top_k,config_.vocab);
+        std::partial_sort(candidates.begin(),candidates.begin()+k,candidates.end(),
+                          [](const auto& a,const auto& b){return a.first>b.first;});
+        float max_val=candidates[0].first;
+        double sum=0;
+        std::vector<float> probs(k);
+        for(int i=0;i<k;i++){
+            probs[i]=std::exp(candidates[i].first-max_val);
+            sum+=probs[i];
+        }
+        float u=dist(rng);
+        double cum=0;
+        int chosen=candidates[k-1].second;
+        for(int i=0;i<k;i++){
+            cum+=probs[i]/sum;
+            if(u<=cum){
+                chosen=candidates[i].second;
+                break;
+            }
+        }
+        all.push_back(chosen);output.push_back(chosen);
     }
     return output;
 }

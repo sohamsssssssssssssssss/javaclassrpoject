@@ -1,0 +1,9 @@
+Test project /Users/soham/college/second year/java /java project/jarvis-integration/jarvis-integration/target/jade-engine-release
+    Start 1: jade_engine_tests
+1/2 Test #1: jade_engine_tests ................   Passed    0.01 sec
+    Start 2: jade_pretraining_tests
+2/2 Test #2: jade_pretraining_tests ...........   Passed    0.32 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   0.34 sec

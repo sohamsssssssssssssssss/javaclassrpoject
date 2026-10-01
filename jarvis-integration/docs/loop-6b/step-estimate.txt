@@ -1,0 +1,2 @@
+1M projectedWeights=917504 5M projectedWeights=4980736 20M projectedWeights=19726336
+forward_ms=14.9313 backwardIncludingForward_ms=36.0310 adamw_ms=39.5520 step_ms=75.5830 positionsPerSecond=846.75

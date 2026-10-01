@@ -145,6 +145,39 @@ int main(int argc,char** argv){
         close(probabilities[0]+probabilities[1]+probabilities[2],1,1e-6f,"softmax sum");
         check(probabilities[0]<probabilities[1]&&probabilities[1]<probabilities[2],"softmax order");
         Config config{32,4,8,2,1,16};check(config.parameter_count()==1056,"tiny parameter count");
+        const Config five_m{1024,32,256,4,6,1024},twenty_m{1024,32,448,8,8,1792},
+                     fifty_m{1024,32,640,8,10,2560};
+        check(five_m.parameter_count()==5251072,"5M remains accepted");
+        check(twenty_m.parameter_count()==20199424,"exact 20M candidate accepted");
+        check(fifty_m.parameter_count()==50483200,"exact 50M candidate accepted");
+        const auto fifty_plan=plan_memory(fifty_m);
+        check(fifty_plan.persistent_bytes==807731200&&fifty_plan.workspace_bytes==17219712&&
+              fifty_plan.checkpoint_bytes==605798468,"50M memory preflight");
+        const auto planned=plan_memory(twenty_m);
+        check(planned.persistent_bytes==323190784&&planned.workspace_bytes==10133632&&
+              planned.checkpoint_bytes==242393156,"20M memory preflight");
+        bool larger_rejected=false;
+        try{Config{1024,32,768,12,10,3072}.validate();}
+        catch(const std::invalid_argument&){larger_rejected=true;}
+        check(larger_rejected,">60M allocation guard");
+        larger_rejected=false;
+        try{Config{1024,32,448,6,8,1792}.validate();}
+        catch(const std::invalid_argument&){larger_rejected=true;}
+        check(larger_rejected,"invalid attention head split");
+        larger_rejected=false;
+        try{Config{std::numeric_limits<int>::max(),4096,4096,1,64,4096}.parameter_count();}
+        catch(const std::invalid_argument&){larger_rejected=true;}
+        check(larger_rejected,"malformed dimensions rejected before arithmetic overflow");
+        larger_rejected=false;
+        try{five_m.validate({61'000'000,2ull*1024*1024*1024});}
+        catch(const std::invalid_argument&){larger_rejected=true;}
+        check(larger_rejected,"engineering ceiling cannot be made unlimited");
+        const auto allocations_before=Tensor::allocations().allocations;
+        larger_rejected=false;
+        try{Engine unsafe(five_m,Backend::Naive,12,{60'000'000,100ull*1024*1024});}
+        catch(const std::invalid_argument&){larger_rejected=true;}
+        check(larger_rejected&&Tensor::allocations().allocations==allocations_before,
+              "memory budget rejected before tensor allocation");
         Engine model(config,Backend::Naive,12);
         const int input[]={1,2,3,4},targets[]={2,3,4,5},future[]={1,7,3,4};
         float loss=model.forward_loss(input,targets,4);
@@ -157,6 +190,17 @@ int main(int argc,char** argv){
         close(backward_loss,loss,1e-6f,"forward/backward loss");
         const float original=model.weights()[0];model.adamw({},1);
         check(model.steps()==1&&model.positions()==4&&model.weights()[0]!=original,"AdamW update");
+        Engine single(config,Backend::Naive,12),averaged(config,Backend::Naive,12);
+        single.zero_grad();averaged.zero_grad();
+        single.backward(input,targets,4);averaged.backward(input,targets,4);
+        for(std::size_t i=0;i<config.parameter_count();i++)averaged.gradient_data()[i]*=2;
+        single.adamw({},1);averaged.adamw({},2);
+        for(std::size_t i=0;i<config.parameter_count();i++){
+            close(averaged.weights()[i],single.weights()[i],0,"batch gradient mean update");
+            close(averaged.first_moments()[i],single.first_moments()[i],0,"batch first moment");
+            close(averaged.second_moments()[i],single.second_moments()[i],0,"batch second moment");
+        }
+        check(averaged.positions()==8&&single.positions()==4,"batch position count");
         const std::filesystem::path path=std::filesystem::temp_directory_path()/"jade-engine-test.jade";
         model.save(path.string());Engine loaded(config,Backend::Naive,99);loaded.load(path.string());
         check(loaded.steps()==model.steps()&&loaded.positions()==model.positions(),"checkpoint counters");

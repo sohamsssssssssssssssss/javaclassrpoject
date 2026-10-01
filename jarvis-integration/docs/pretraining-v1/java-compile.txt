@@ -1,0 +1,18 @@
+[INFO] Scanning for projects...
+[INFO]
+[INFO] ---------------------------< com.jade:jade >----------------------------
+[INFO] Building JADE 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- resources:3.4.0:resources (default-resources) @ jade ---
+[INFO] Copying 3 resources from src/main/resources to target/classes
+[INFO]
+[INFO] --- compiler:3.13.0:compile (default-compile) @ jade ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  0.350 s
+[INFO] Finished at: 2026-10-01T02:07:15+05:30
+[INFO] ------------------------------------------------------------------------

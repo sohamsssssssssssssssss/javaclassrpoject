@@ -1,0 +1,3 @@
+PARITY backend=naive forward_abs=2.02617486122e-07 forward_rel_floor1e-6=3.51293813908e-05 loss_java=3.43300611462 loss_cpp=3.4330060482 gradient_abs=5.67965446896e-08 gradient_rel_floor1e-6=3.91959648512e-05 finite_difference_abs=0.000101238489151 finite_difference_rel_floor1e-3=0.084014784079 adamw_abs=1.86854472173e-08
+PARITY backend=accelerate forward_abs=2.02617486122e-07 forward_rel_floor1e-6=3.51293813908e-05 loss_java=3.43300611462 loss_cpp=3.4330060482 gradient_abs=5.28636426855e-08 gradient_rel_floor1e-6=3.91959648512e-05 finite_difference_abs=0.00010122358799 finite_difference_rel_floor1e-3=0.084014784079 adamw_abs=1.86854472173e-08
+PASS checks=17532
